@@ -1,6 +1,6 @@
 #include <stdio.h>
-int main(int argc, char const *argv[])
-{
+#include <sys/socket.h>
+int main(int argc, char const *argv[]) {
     printf("Hello World");
     return 0;
 }
