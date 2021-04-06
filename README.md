@@ -1,3 +1,3 @@
-# baka_dns the domain name system
+# baka_dns the domain name server
 
 enjoy!
