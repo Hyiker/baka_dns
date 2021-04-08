@@ -4,6 +4,7 @@
         "server.h": "c",
         "string.h": "c",
         "message.h": "c",
-        "stdint.h": "c"
+        "stdint.h": "c",
+        "build_conf.h": "c"
     }
 }

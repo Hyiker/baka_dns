@@ -23,25 +23,17 @@ static uint8_t u8n_to_u8h(const uint8_t* ptr) {
     memcpy(&dest, ptr, sizeof(uint8_t));
     return dest;
 }
-static void msg_header_from_buf(uint8_t* buf,
+static void msg_header_from_buf(const uint8_t* buf,
                                 struct message_header* msg_header) {
     uint16_t id, qdcount, ancount, nscount, arcount;
     uint8_t misc1, misc2;
-    uint8_t* ptr = buf;
-    id = u8n_to_u16h(ptr);
-    ptr += sizeof(id);
-    misc1 = u8n_to_u8h(ptr);
-    ptr += sizeof(misc1);
-    misc2 = u8n_to_u8h(ptr);
-    ptr += sizeof(misc2);
-    qdcount = u8n_to_u16h(ptr);
-    ptr += sizeof(qdcount);
-    ancount = u8n_to_u16h(ptr);
-    ptr += sizeof(ancount);
-    nscount = u8n_to_u16h(ptr);
-    ptr += sizeof(nscount);
-    arcount = u8n_to_u16h(ptr);
-    ptr += sizeof(arcount);
+    id = u8n_to_u16h(buf);
+    misc1 = u8n_to_u8h(buf += sizeof(id));
+    misc2 = u8n_to_u8h(buf += sizeof(misc1));
+    qdcount = u8n_to_u16h(buf += sizeof(misc2));
+    ancount = u8n_to_u16h(buf += sizeof(qdcount));
+    nscount = u8n_to_u16h(buf += sizeof(ancount));
+    arcount = u8n_to_u16h(buf += sizeof(nscount));
     msg_header->id = id;
     msg_header->misc1 = misc1;
     msg_header->misc2 = misc2;
@@ -104,7 +96,7 @@ static int msg_question_from_buf(const uint8_t* buf,
     return qname_len + sizeof(qtype) + sizeof(qclass);
 }
 
-static int msg_rr_from_buf(uint8_t* buf, struct resource_record* rr) {
+static int msg_rr_from_buf(const uint8_t* buf, struct resource_record* rr) {
     uint8_t domainbuf[DOMAIN_BUF_LEN];
     int name_len = read_domain(buf, domainbuf);
     if (name_len < 0) {
@@ -134,12 +126,12 @@ static int msg_rr_from_buf(uint8_t* buf, struct resource_record* rr) {
         name, type, _class, ttl, rdlength, rdata);
 #endif
 }
-int message_from_buf(uint8_t* buf, uint32_t size, struct message* msg) {
+int message_from_buf(const uint8_t* buf, uint32_t size, struct message* msg) {
     if (size < sizeof(struct message_header)) {
         perror("size too small");
         return -1;
     }
-    uint8_t* bufptr = buf;
+    const uint8_t* bufptr = buf;
     msg_header_from_buf(bufptr, &msg->header);
     bufptr += sizeof(msg->header);
 
