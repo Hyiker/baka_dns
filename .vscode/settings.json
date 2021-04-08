@@ -1,0 +1,9 @@
+{
+    "files.associations": {
+        "*.html": "html",
+        "server.h": "c",
+        "string.h": "c",
+        "message.h": "c",
+        "stdint.h": "c"
+    }
+}

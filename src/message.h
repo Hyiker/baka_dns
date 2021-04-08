@@ -28,4 +28,9 @@ struct message {
     struct resource_record* addition;     // len by arcount
 };
 
+// convert buf into message
+// ret: non-neg is size of message
+// else means errors occur when converting
+int message_from_buf(uint8_t*, uint32_t, struct message*);
+
 #endif
