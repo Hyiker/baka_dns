@@ -1,6 +1,9 @@
 #include "server.h"
 
 #include <string.h>
+#ifndef MSG_CONFIRM
+#define MSG_CONFIRM MSG_OOB
+#endif  // !MSG_CONFIRM
 
 int create_socket(in_addr_t addr, uint16_t port) {
     int sockfd;
