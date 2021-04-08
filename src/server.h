@@ -9,6 +9,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include "build_conf.h"
 #define UDP_BUFFER_SIZE 1024
 
 // create a socket with local _addr_ and _port_

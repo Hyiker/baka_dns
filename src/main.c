@@ -7,6 +7,7 @@
 int recv_handle(uint8_t* buf, uint32_t size) {
     printf("Client data of size %u recv\n", size);
     struct message msg;
+    memset(&msg, 0, sizeof(msg));
     message_from_buf(buf, size, &msg);
     return 1;
 }
