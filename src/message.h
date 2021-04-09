@@ -69,4 +69,7 @@ struct message {
 int message_from_buf(const uint8_t*, uint32_t, struct message*);
 
 int message_to_u8(const struct message*, uint8_t*);
+
+// free heap-allocated data in the message struct
+int free_heap_message(struct message*);
 #endif

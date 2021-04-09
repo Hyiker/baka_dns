@@ -48,5 +48,6 @@ int resolv_handle(uint8_t* sendbuf, uint32_t* ans_size,
     printf("resp msg(%u): ", *ans_size);
     print_u8(sendbuf, *ans_size);
 #endif
+    free_heap_message(&ans);
     return 1;
 }

@@ -41,7 +41,7 @@ int create_socket(in_addr_t addr, uint16_t port) {
 }
 
 void listen_socket(int fd,
-                   int (*recv_handle)(uint8_t *, uint32_t, struct message *),
+                   int (*recv_handle)(const uint8_t *, uint32_t, struct message *),
                    int (*resolv_handle)(uint8_t *, uint32_t *,
                                         const struct message *)) {
     struct sockaddr_in cliaddr;
@@ -65,5 +65,6 @@ void listen_socket(int fd,
         }
         sendto(fd, sendbuf, nsend, MSG_CONFIRM,
                (const struct sockaddr *)&cliaddr, len);
+        free_heap_message(&msgrcv);
     }
 }

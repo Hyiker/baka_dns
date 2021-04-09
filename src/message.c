@@ -264,3 +264,65 @@ int message_to_u8(const struct message* msg, uint8_t* dest) {
     }
     return hsize + qsize + ansize + nssize + arsize;
 }
+
+static void free_heap_message_question(struct message_question* mqptr) {
+    if (mqptr->qname) {
+        free(mqptr->qname);
+    }
+    free(mqptr);
+}
+
+static void free_heap_resource_record(struct resource_record* rrptr) {
+    if (rrptr->name) {
+        free(rrptr->name);
+    }
+    if (rrptr->rdata) {
+        free(rrptr->rdata);
+    }
+
+    free(rrptr);
+}
+int free_heap_message(struct message* msgptr) {
+    for (size_t i = 0; i < msgptr->header.qdcount; i++) {
+        if (!msgptr->question || !msgptr->question[i]) {
+            perror("invalid qdcount");
+            return -1;
+        }
+        free_heap_message_question(msgptr->question[i]);
+    }
+    if (msgptr->question) {
+        free(msgptr->question);
+    }
+    for (size_t i = 0; i < msgptr->header.ancount; i++) {
+        if (!msgptr->answer || !msgptr->answer[i]) {
+            perror("invalid ancount");
+            return -1;
+        }
+        free_heap_resource_record(msgptr->answer[i]);
+    }
+    if (msgptr->answer) {
+        free(msgptr->answer);
+    }
+
+    for (size_t i = 0; i < msgptr->header.nscount; i++) {
+        if (!msgptr->authority || !msgptr->authority[i]) {
+            perror("invalid nscount");
+            return -1;
+        }
+        free_heap_resource_record(msgptr->authority[i]);
+    }
+    if (msgptr->authority) {
+        free(msgptr->authority);
+    }
+
+    for (size_t i = 0; i < msgptr->header.arcount; i++) {
+        if (!msgptr->addition || !msgptr->addition[i]) {
+            perror("invalid arcount");
+            return -1;
+        }
+        free_heap_resource_record(msgptr->addition[i]);
+    }
+    if (msgptr->addition) {
+        free(msgptr->addition);
+    }
+}
