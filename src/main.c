@@ -1,6 +1,7 @@
 #include <string.h>
 
 #include "message.h"
+#include "resolv.h"
 #include "server.h"
 
 #define UDP_PORT 53
@@ -11,6 +12,6 @@ int main(int argc, char const* argv[]) {
         exit(EXIT_FAILURE);
     }
 
-    listen_socket(fd, dns_recv_handle, dns_send_handle);
+    listen_socket(fd, dns_recv_handle, resolv_handle);
     return 0;
 }

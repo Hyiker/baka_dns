@@ -19,12 +19,22 @@
 #define RA_TRUE 1
 #define RA_FALSE 0
 #define Z 0
+
 #define RCODE_NO_ERROR 0
 #define RCODE_FORMAT_ERROR 1
 #define RCODE_SERVER_FAILURE 2
 #define RCODE_NAME_ERROR 3
 #define RCODE_NOT_IMPLEMENTED 4
 #define RCODE_REFUSED 5
+
+#define RRTYPE_A 1
+#define RRTYPE_AAAA 28
+#define RRTYPE_PTR 12
+#define RRTYPE_CNAME 5
+#define RRTYPE_HINFO 13
+#define RRTYPE_MX 15
+#define RRTYPE_NS 2
+#define RRCLASS_IN 1
 
 struct message_header {
     uint16_t id;
@@ -58,4 +68,5 @@ struct message {
 // else means errors occur when converting
 int message_from_buf(const uint8_t*, uint32_t, struct message*);
 
+int message_to_u8(const struct message*, uint8_t*);
 #endif

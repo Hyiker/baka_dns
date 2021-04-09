@@ -23,6 +23,14 @@ static uint8_t u8n_to_u8h(const uint8_t* ptr) {
     memcpy(&dest, ptr, sizeof(uint8_t));
     return dest;
 }
+static void u32h_to_u8n(uint32_t h, uint8_t* ptr) {
+    uint32_t dest = htonl(h);
+    memcpy(ptr, &dest, sizeof(h));
+}
+static void u16h_to_u8n(uint16_t h, uint8_t* ptr) {
+    uint16_t dest = htonl(h);
+    memcpy(ptr, &dest, sizeof(h));
+}
 static void msg_header_from_buf(const uint8_t* buf,
                                 struct message_header* msg_header) {
     uint16_t id, qdcount, ancount, nscount, arcount;
@@ -186,4 +194,73 @@ int message_from_buf(const uint8_t* buf, uint32_t size, struct message* msg) {
         bufptr += n;
     }
     return 1;
+}
+
+static int msg_header_to_u8(const struct message_header* header,
+                            uint8_t* dest) {
+    u16h_to_u8n(header->id, dest);
+    dest += sizeof(uint16_t);
+    *(dest++) = header->misc1;
+    *(dest++) = header->misc2;
+    u16h_to_u8n(header->qdcount, dest);
+    u16h_to_u8n(header->ancount, dest += sizeof(uint16_t));
+    u16h_to_u8n(header->nscount, dest += sizeof(uint16_t));
+    u16h_to_u8n(header->arcount, dest += sizeof(uint16_t));
+    return sizeof(struct message_header);
+}
+static int msg_question_to_u8(const struct message_question* q, uint8_t* dest) {
+    uint32_t len_qname = 1;
+    len_qname += strnlen(q->qname, DOMAIN_LEN_MAX);
+    memcpy(dest, q->qname, len_qname);
+    u16h_to_u8n(q->qtype, dest += len_qname);
+    u16h_to_u8n(q->qclass, dest += sizeof(q->qtype));
+    return len_qname + sizeof(q->qtype) + sizeof(q->qclass);
+}
+static int msg_rr_to_u8(const struct resource_record* rr, uint8_t* dest) {
+    uint32_t len_name = 1;
+    len_name += strnlen(rr->name, DOMAIN_LEN_MAX);
+    memcpy(dest, rr->name, len_name);
+    u16h_to_u8n(rr->type, dest += len_name);
+    u16h_to_u8n(rr->_class, dest += sizeof(rr->type));
+    u32h_to_u8n(rr->ttl, dest += sizeof(rr->_class));
+    u16h_to_u8n(rr->rdlength, dest += sizeof(rr->ttl));
+    memcpy(dest += sizeof(rr->rdlength), rr->rdata, rr->rdlength);
+    return len_name + sizeof(rr->type) + sizeof(rr->_class) + sizeof(rr->ttl) +
+           sizeof(rr->rdlength) + rr->rdlength;
+}
+int message_to_u8(const struct message* msg, uint8_t* dest) {
+    uint32_t hsize = 0, qsize = 0, ansize = 0, nssize = 0, arsize = 0;
+    // header
+    dest += (hsize = msg_header_to_u8(&msg->header, dest));
+    // question
+    if (msg->header.qdcount) {
+        if (!msg->question) {
+            perror("invalid question**");
+            return -1;
+        }
+
+        for (size_t i = 0; i < msg->header.qdcount; i++) {
+            if (!msg->question[i]) {
+                perror("invalid question*");
+                return -1;
+            }
+            dest += (qsize = msg_question_to_u8(msg->question[i], dest));
+        }
+    }
+    // rr answer
+    if (msg->header.ancount) {
+        if (!msg->answer) {
+            perror("invalid answer**");
+            return -1;
+        }
+
+        for (size_t i = 0; i < msg->header.ancount; i++) {
+            if (!msg->answer[i]) {
+                perror("invalid answer*");
+                return -1;
+            }
+            dest += (ansize = msg_rr_to_u8(msg->answer[i], dest));
+        }
+    }
+    return hsize + qsize + ansize + nssize + arsize;
 }
