@@ -28,7 +28,7 @@ static void u32h_to_u8n(uint32_t h, uint8_t* ptr) {
     memcpy(ptr, &dest, sizeof(h));
 }
 static void u16h_to_u8n(uint16_t h, uint8_t* ptr) {
-    uint16_t dest = htonl(h);
+    uint16_t dest = htons(h);
     memcpy(ptr, &dest, sizeof(h));
 }
 static void msg_header_from_buf(const uint8_t* buf,
