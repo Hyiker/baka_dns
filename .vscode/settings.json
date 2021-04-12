@@ -5,6 +5,8 @@
         "string.h": "c",
         "message.h": "c",
         "stdint.h": "c",
-        "build_conf.h": "c"
+        "build_conf.h": "c",
+        "stdio.h": "c",
+        "resolv.h": "c"
     }
 }

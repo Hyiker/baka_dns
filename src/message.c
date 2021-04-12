@@ -5,6 +5,13 @@
 #include <stdlib.h>
 #include <string.h>
 
+int domain_len(const char* domain) {
+    int result = strnlen(domain, DOMAIN_BUF_LEN) + 1;
+    if (result > DOMAIN_LEN_MAX) {
+        return -1;
+    }
+    return result;
+}
 // copy the network byte ordered u8 array into dest with _size_
 static uint32_t u8n_to_u32h(const uint8_t* ptr) {
     uint32_t dest;
@@ -50,17 +57,15 @@ static void msg_header_from_buf(const uint8_t* buf,
     msg_header->nscount = nscount;
     msg_header->arcount = arcount;
 #ifdef VERBOSE
-    printf("id = %u, qdcount = %u, ancount = %u, nscount = %u, arcount = %u\n",
-           msg_header->id, msg_header->qdcount, msg_header->ancount,
-           msg_header->nscount, msg_header->arcount);
+    print_msg_header(msg_header);
 #endif  // VERBOSE
 }
 // store domain from buf into dest
 // returns the length of domain name(includes the '\0')
 // -1 if err
 static int read_domain(const uint8_t* buf, char* dest) {
-    size_t buf_domain_len = strnlen(buf, DOMAIN_BUF_LEN) + 1;
-    if (buf_domain_len > DOMAIN_LEN_MAX || buf_domain_len == 0u) {
+    int buf_domain_len = domain_len(buf);
+    if (buf_domain_len == -1 || buf_domain_len == 0u) {
         perror("bad domain length");
         return -1;
     }
@@ -209,16 +214,22 @@ static int msg_header_to_u8(const struct message_header* header,
     return sizeof(struct message_header);
 }
 static int msg_question_to_u8(const struct message_question* q, uint8_t* dest) {
-    uint32_t len_qname = 1;
-    len_qname += strnlen(q->qname, DOMAIN_LEN_MAX);
+    int len_qname = domain_len(q->qname);
+    if (len_qname == -1) {
+        perror("bad qname length");
+        return -1;
+    }
     memcpy(dest, q->qname, len_qname);
     u16h_to_u8n(q->qtype, dest += len_qname);
     u16h_to_u8n(q->qclass, dest += sizeof(q->qtype));
     return len_qname + sizeof(q->qtype) + sizeof(q->qclass);
 }
 static int msg_rr_to_u8(const struct resource_record* rr, uint8_t* dest) {
-    uint32_t len_name = 1;
-    len_name += strnlen(rr->name, DOMAIN_LEN_MAX);
+    int len_name = domain_len(rr->name);
+    if (len_name == -1) {
+        perror("bad name length");
+        return -1;
+    }
     memcpy(dest, rr->name, len_name);
     u16h_to_u8n(rr->type, dest += len_name);
     u16h_to_u8n(rr->_class, dest += sizeof(rr->type));
@@ -325,4 +336,23 @@ int free_heap_message(struct message* msgptr) {
     if (msgptr->addition) {
         free(msgptr->addition);
     }
+}
+
+void print_msg_header(struct message_header* msg_header) {
+    printf(
+        "id = %u, misc1 = 0x%02x, misc2 = 0x%02x, qdcount = %u, ancount = %u, "
+        "nscount "
+        "= %u, arcount = %u\n",
+        msg_header->id, msg_header->misc1, msg_header->misc2,
+        msg_header->qdcount, msg_header->ancount, msg_header->nscount,
+        msg_header->arcount);
+}
+inline uint8_t create_misc1(uint8_t qr, uint8_t opcode, uint8_t aa, uint8_t tc,
+                            uint8_t rd) {
+    return (qr << 7) & QR_MASK | (opcode << 3) & OPCODE_MASK |
+           (aa << 2) & AA_MASK | (tc << 1) & TC_MASK | rd & RD_MASK;
+}
+
+inline uint8_t create_misc2(uint8_t ra, uint8_t z, uint8_t rcode) {
+    return (ra << 7) & RA_MASK | (z << 4) & Z_MASK | rcode & RCODE_MASK;
 }

@@ -1,5 +1,6 @@
 #include <string.h>
 
+#include "database.h"
 #include "message.h"
 #include "resolv.h"
 #include "server.h"
@@ -11,7 +12,7 @@ int main(int argc, char const* argv[]) {
     if (fd < 0) {
         exit(EXIT_FAILURE);
     }
-
+    init_database("");
     listen_socket(fd, dns_recv_handle, resolv_handle);
     return 0;
 }
