@@ -2,7 +2,7 @@
 #define DATABASE_H
 #include <stdint.h>
 
-#include "message.h"
+#include "server/message.h"
 #define DB_NRR_MAX 100
 enum db_node_type { A = 1, NS = 2, CNAME = 5, MX = 15 };
 struct db_zone {};

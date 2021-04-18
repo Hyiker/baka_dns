@@ -2,7 +2,7 @@
 #define MESSAGE_H
 #include <stdint.h>
 
-#include "build_conf.h"
+#include "utils/conf.h"
 #define DOMAIN_LEN_MAX 256
 #define DOMAIN_BUF_LEN 512
 #define QR_REQ 0

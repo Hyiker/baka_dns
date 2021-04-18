@@ -9,7 +9,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include "build_conf.h"
+#include "utils/conf.h"
 #include "message.h"
 
 #define UDP_BUFFER_SIZE 1024

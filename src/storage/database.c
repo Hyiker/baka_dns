@@ -1,4 +1,4 @@
-#include "database.h"
+#include "storage/database.h"
 
 #include <stdlib.h>
 int init_database(const char* master_file_path) {

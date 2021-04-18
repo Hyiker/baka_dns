@@ -1,9 +1,11 @@
-#include "message.h"
+#include "server/message.h"
 
 #include <netinet/in.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include "utils/logging.h"
 
 int domain_len(const char* domain) {
     int result = strnlen(domain, DOMAIN_BUF_LEN) + 1;
@@ -93,19 +95,6 @@ static int msg_question_from_buf(const uint8_t* buf,
     msg_qd->qname = qname;
     msg_qd->qtype = qtype;
     msg_qd->qclass = qclass;
-#ifdef VERBOSE
-    char* ch = msg_qd->qname;
-    while (*ch) {
-        int j = 0;
-        for (j = 0; j < *ch; j++) {
-            printf("%c", ch[j + 1]);
-        }
-        printf(".");
-        ch += j + 1;
-    }
-    printf("\n");
-
-#endif  // VERBOSE
     return qname_len + sizeof(qtype) + sizeof(qclass);
 }
 
@@ -132,12 +121,9 @@ static int msg_rr_from_buf(const uint8_t* buf, struct resource_record* rr) {
     rr->type = type;
     rr->ttl = ttl;
     rr->rdlength = rdlength;
-#ifdef VERBOSE
-    printf(
-        "name = %s, type = %x, class = %x, ttl = %u, rdlength = %u, rdata = "
+    LOG_INFO("name = %s, type = %x, class = %x, ttl = %u, rdlength = %u, rdata = "
         "%s\n",
         name, type, _class, ttl, rdlength, rdata);
-#endif
 }
 int message_from_buf(const uint8_t* buf, uint32_t size, struct message* msg) {
     if (size < sizeof(struct message_header)) {
@@ -339,7 +325,7 @@ int free_heap_message(struct message* msgptr) {
 }
 
 void print_msg_header(struct message_header* msg_header) {
-    printf(
+    LOG_INFO(
         "id = %u, misc1 = 0x%02x, misc2 = 0x%02x, qdcount = %u, ancount = %u, "
         "nscount "
         "= %u, arcount = %u\n",

@@ -1,9 +1,9 @@
-#include "server.h"
+#include "server/server.h"
 
 #include <string.h>
 
-#include "database.h"
-#include "utils.h"
+#include "storage/database.h"
+#include "utils/logging.h"
 
 #ifndef MSG_CONFIRM
 #define MSG_CONFIRM MSG_OOB
@@ -11,10 +11,6 @@
 
 int dns_recv_handle(const uint8_t *buf, uint32_t size, struct message *msg) {
     int msgsig = message_from_buf(buf, size, msg);
-#ifdef VERBOSE
-    printf("raw msg(%u): ", size);
-    print_u8(buf, size);
-#endif
     return msgsig;
 }
 

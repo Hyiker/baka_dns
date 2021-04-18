@@ -7,6 +7,9 @@
         "stdint.h": "c",
         "build_conf.h": "c",
         "stdio.h": "c",
-        "resolv.h": "c"
+        "resolv.h": "c",
+        "conf.h": "c",
+        "logging.h": "c",
+        "database.h": "c"
     }
 }

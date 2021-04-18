@@ -1,13 +1,14 @@
 
-#include "resolv.h"
+#include "server/resolv.h"
 
 #include <arpa/inet.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "database.h"
-#include "utils.h"
+#include "storage/database.h"
+#include "utils/conf.h"
+#include "utils/logging.h"
 
 static int rr_match(const struct resource_record* rr,
                     const struct message_question* mq, uint32_t dlen) {
@@ -33,7 +34,7 @@ int resolv_handle(uint8_t* sendbuf, uint32_t* ans_size,
     memset(&ans, 0, sizeof(ans));
     ans.header.id = query->header.id;
     // step1: clear the ra, currently not supported
-    if (_RD(query->header.misc1) && RECURSION_ENABLED) {
+    if (_RD(query->header.misc1) && conf.recursion_enabled) {
         // TODO: support recursive service
     }
 
@@ -61,6 +62,11 @@ int resolv_handle(uint8_t* sendbuf, uint32_t* ans_size,
             if (match_res < 0) {
                 return -1;
             }
+            if (match_res == 0) {
+                // none matched
+                // TODO
+            }
+
             // a. the whole of qname is matched
             if (nodebuf.type == CNAME && question->qtype != CNAME) {
                 // if the data at the node is a cname
@@ -83,8 +89,8 @@ int resolv_handle(uint8_t* sendbuf, uint32_t* ans_size,
                 }
                 // ends here
             }
-            // b. authoritative data
-            // TODO
+            // TODO: b. non-authoritative data
+        } else {
         }
     }
 
@@ -128,11 +134,10 @@ int resolv_handle(uint8_t* sendbuf, uint32_t* ans_size,
         return -1;
     }
     *ans_size = msgsize;
-#ifdef VERBOSE
+
     print_msg_header(&ans.header);
-    printf("resp msg(%u): ", *ans_size);
-    print_u8(sendbuf, *ans_size);
-#endif
+    LOG_INFO("resp msg(%u): ", *ans_size);
+    PRINT_U8ARR(sendbuf, *ans_size);
     free_heap_message(&ans);
     return 1;
 }
