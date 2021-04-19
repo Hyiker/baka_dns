@@ -10,6 +10,7 @@
         "resolv.h": "c",
         "conf.h": "c",
         "logging.h": "c",
-        "database.h": "c"
+        "database.h": "c",
+        "*.tcc": "c"
     }
 }

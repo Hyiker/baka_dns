@@ -10,6 +10,7 @@
 int domain_len(const char* domain) {
     int result = strnlen(domain, DOMAIN_BUF_LEN) + 1;
     if (result > DOMAIN_LEN_MAX) {
+        LOG_ERR("domain len too loooooong\n");
         return -1;
     }
     return result;
@@ -58,9 +59,7 @@ static void msg_header_from_buf(const uint8_t* buf,
     msg_header->ancount = ancount;
     msg_header->nscount = nscount;
     msg_header->arcount = arcount;
-#ifdef VERBOSE
     print_msg_header(msg_header);
-#endif  // VERBOSE
 }
 // store domain from buf into dest
 // returns the length of domain name(includes the '\0')
@@ -68,7 +67,7 @@ static void msg_header_from_buf(const uint8_t* buf,
 static int read_domain(const uint8_t* buf, char* dest) {
     int buf_domain_len = domain_len(buf);
     if (buf_domain_len == -1 || buf_domain_len == 0u) {
-        perror("bad domain length");
+        LOG_ERR("bad domain length");
         return -1;
     }
 
@@ -121,13 +120,14 @@ static int msg_rr_from_buf(const uint8_t* buf, struct resource_record* rr) {
     rr->type = type;
     rr->ttl = ttl;
     rr->rdlength = rdlength;
-    LOG_INFO("name = %s, type = %x, class = %x, ttl = %u, rdlength = %u, rdata = "
+    LOG_INFO(
+        "name = %s, type = %x, class = %x, ttl = %u, rdlength = %u, rdata = "
         "%s\n",
         name, type, _class, ttl, rdlength, rdata);
 }
 int message_from_buf(const uint8_t* buf, uint32_t size, struct message* msg) {
     if (size < sizeof(struct message_header)) {
-        perror("size too small");
+        LOG_ERR("size too small");
         return -1;
     }
     const uint8_t* bufptr = buf;
@@ -202,7 +202,7 @@ static int msg_header_to_u8(const struct message_header* header,
 static int msg_question_to_u8(const struct message_question* q, uint8_t* dest) {
     int len_qname = domain_len(q->qname);
     if (len_qname == -1) {
-        perror("bad qname length");
+        LOG_ERR("bad qname length");
         return -1;
     }
     memcpy(dest, q->qname, len_qname);
@@ -213,7 +213,7 @@ static int msg_question_to_u8(const struct message_question* q, uint8_t* dest) {
 static int msg_rr_to_u8(const struct resource_record* rr, uint8_t* dest) {
     int len_name = domain_len(rr->name);
     if (len_name == -1) {
-        perror("bad name length");
+        LOG_ERR("bad name length");
         return -1;
     }
     memcpy(dest, rr->name, len_name);
@@ -232,13 +232,13 @@ int message_to_u8(const struct message* msg, uint8_t* dest) {
     // question
     if (msg->header.qdcount) {
         if (!msg->question) {
-            perror("invalid question**");
+            LOG_ERR("invalid question**");
             return -1;
         }
 
         for (size_t i = 0; i < msg->header.qdcount; i++) {
             if (!msg->question[i]) {
-                perror("invalid question*");
+                LOG_ERR("invalid question*");
                 return -1;
             }
             dest += (qsize = msg_question_to_u8(msg->question[i], dest));
@@ -247,13 +247,13 @@ int message_to_u8(const struct message* msg, uint8_t* dest) {
     // rr answer
     if (msg->header.ancount) {
         if (!msg->answer) {
-            perror("invalid answer**");
+            LOG_ERR("invalid answer**");
             return -1;
         }
 
         for (size_t i = 0; i < msg->header.ancount; i++) {
             if (!msg->answer[i]) {
-                perror("invalid answer*");
+                LOG_ERR("invalid answer*");
                 return -1;
             }
             dest += (ansize = msg_rr_to_u8(msg->answer[i], dest));
@@ -282,7 +282,7 @@ static void free_heap_resource_record(struct resource_record* rrptr) {
 int free_heap_message(struct message* msgptr) {
     for (size_t i = 0; i < msgptr->header.qdcount; i++) {
         if (!msgptr->question || !msgptr->question[i]) {
-            perror("invalid qdcount");
+            LOG_ERR("invalid qdcount");
             return -1;
         }
         free_heap_message_question(msgptr->question[i]);
@@ -292,7 +292,7 @@ int free_heap_message(struct message* msgptr) {
     }
     for (size_t i = 0; i < msgptr->header.ancount; i++) {
         if (!msgptr->answer || !msgptr->answer[i]) {
-            perror("invalid ancount");
+            LOG_ERR("invalid ancount");
             return -1;
         }
         free_heap_resource_record(msgptr->answer[i]);
@@ -303,7 +303,7 @@ int free_heap_message(struct message* msgptr) {
 
     for (size_t i = 0; i < msgptr->header.nscount; i++) {
         if (!msgptr->authority || !msgptr->authority[i]) {
-            perror("invalid nscount");
+            LOG_ERR("invalid nscount");
             return -1;
         }
         free_heap_resource_record(msgptr->authority[i]);
@@ -314,7 +314,7 @@ int free_heap_message(struct message* msgptr) {
 
     for (size_t i = 0; i < msgptr->header.arcount; i++) {
         if (!msgptr->addition || !msgptr->addition[i]) {
-            perror("invalid arcount");
+            LOG_ERR("invalid arcount");
             return -1;
         }
         free_heap_resource_record(msgptr->addition[i]);

@@ -11,7 +11,7 @@
 
 int main(int argc, char* argv[]) {
     parse_cmd(argc, argv, &conf);
-    LOG_INFO("Initializing server...");
+    LOG_INFO("Initializing server...\n");
     int fd = create_socket(INADDR_ANY, UDP_PORT);
     if (fd < 0) {
         exit(EXIT_FAILURE);

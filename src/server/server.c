@@ -11,6 +11,7 @@
 
 int dns_recv_handle(const uint8_t *buf, uint32_t size, struct message *msg) {
     int msgsig = message_from_buf(buf, size, msg);
+
     return msgsig;
 }
 
@@ -18,7 +19,7 @@ int create_socket(in_addr_t addr, uint16_t port) {
     int sockfd;
     struct sockaddr_in servaddr;
     if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
-        perror("create socket failed");
+        LOG_ERR("create socket failed");
         return -1;
     }
 
@@ -31,7 +32,7 @@ int create_socket(in_addr_t addr, uint16_t port) {
 
     if (bind(sockfd, (const struct sockaddr *)&servaddr, sizeof(servaddr)) <
         0) {
-        perror("bind failed");
+        LOG_ERR("bind failed");
         return -1;
     }
     return sockfd;

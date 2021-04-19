@@ -1,5 +1,7 @@
 #ifndef LOGGING_H
 #define LOGGING_H
+#include <string.h>
+
 #include "stdint.h"
 #define __FILENAME__ \
     (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)

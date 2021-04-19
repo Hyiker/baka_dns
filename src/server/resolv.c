@@ -9,126 +9,98 @@
 #include "storage/database.h"
 #include "utils/conf.h"
 #include "utils/logging.h"
+static void print_question(const struct message_question* mqptr) {
+    char questionbuf[512] = {0};
+    size_t qi = 0;
+    int dlen = domain_len(mqptr->qname);
+    if (dlen < 0) {
+        return;
+    }
+    for (size_t i = 0; i < dlen; i++) {
+        uint32_t len = mqptr->qname[i];
+        if (!len) {
+            break;
+        }
 
+        for (size_t j = 1; j <= len; j++) {
+            questionbuf[qi++] = mqptr->qname[i + j];
+        }
+        i += len;
+        questionbuf[qi++] = '.';
+    }
+    LOG_INFO("requested domain: %s, qtype = %d\n", questionbuf, mqptr->qtype);
+}
 static int rr_match(const struct resource_record* rr,
                     const struct message_question* mq, uint32_t dlen) {
     return rr->type == mq->qtype && rr->_class == mq->qclass &&
            strncmp(rr->name, mq->qname, dlen);
 }
-static struct resource_record* rr_copy(const struct resource_record* rr,
-                                       uint32_t dlen) {
-    struct resource_record* new_rr = malloc(sizeof(struct resource_record));
+// copy resource record from _src_ into _dest_
+// attention: this function will automatically allocates mem for name & rdata
+// return -1 if failed else 1
+static int rr_copy(struct resource_record* dest,
+                   const struct resource_record* src) {
+    memcpy(dest, src, sizeof(struct resource_record));
+    int dlen = domain_len(src->name);
+    if (dlen < 0) {
+        return -1;
+    }
 
-    memcpy(new_rr, rr, sizeof(struct resource_record));
-    new_rr->name = malloc(sizeof(uint8_t) * dlen);
-    new_rr->rdata = malloc(sizeof(uint8_t) * rr->rdlength);
-    memcpy(new_rr->name, rr->name, sizeof(uint8_t) * dlen);
-    memcpy(new_rr->rdata, rr->rdata, sizeof(uint8_t) * rr->rdlength);
-    return new_rr;
+    dest->name = malloc(sizeof(uint8_t) * dlen);
+    dest->rdata = malloc(sizeof(uint8_t) * src->rdlength);
+    memcpy(dest->name, src->name, sizeof(uint8_t) * dlen);
+    memcpy(dest->rdata, src->rdata, sizeof(uint8_t) * src->rdlength);
+    return 1;
 }
 
 int resolv_handle(uint8_t* sendbuf, uint32_t* ans_size,
                   const struct message* query) {
-    // step0: setup the response message
+    // setup the response message
     struct message ans;
     memset(&ans, 0, sizeof(ans));
     ans.header.id = query->header.id;
-    // step1: clear the ra, currently not supported
+    // clear the ra, currently not supported
     if (_RD(query->header.misc1) && conf.recursion_enabled) {
         // TODO: support recursive service
     }
-
-    // step2: for each query, search nearest ancestor to QNAME
-    for (int i = 0; i < query->header.qdcount; i++) {
-        if (!query->question[i]) {
-            perror("bad query->question");
-            return -1;
-        }
-
-        const struct message_question* question = query->question[i];
-        int dlen = domain_len(question->qname);
-
-        struct db_zone zonebuf;
-        int find_res = db_find_zone(&zonebuf, question->qname, dlen);
-        if (find_res < 0) {
-            return -1;
-        }
-
-        if (find_res > 0) {
-            // step 3. matching down label in the zone
-            struct db_node nodebuf;
-            int match_res =
-                db_find_node(&zonebuf, &nodebuf, question->qname, dlen);
-            if (match_res < 0) {
-                return -1;
-            }
-            if (match_res == 0) {
-                // none matched
-                // TODO
-            }
-
-            // a. the whole of qname is matched
-            if (nodebuf.type == CNAME && question->qtype != CNAME) {
-                // if the data at the node is a cname
-                // and qtype doesn't match it
-                // TODO: handle it
-            } else {
-                struct resource_record* rrbuf[DB_NRR_MAX];
-                for (size_t i = 0; i < nodebuf.n_rr; i++) {
-                    if (rr_match(&nodebuf.rr[i], question, dlen)) {
-                        rrbuf[ans.header.ancount++] =
-                            rr_copy(&nodebuf.rr[i], dlen);
-                    }
-                }
-                if (ans.header.ancount) {
-                    ans.answer = malloc(ans.header.ancount *
-                                        sizeof(struct resource_record*));
-                    memcpy(
-                        ans.answer, rrbuf,
-                        ans.header.ancount * sizeof(struct resource_record*));
-                }
-                // ends here
-            }
-            // TODO: b. non-authoritative data
-        } else {
-        }
-    }
-
-    // header setup
-    uint8_t misc1, misc2;
+    // set ancount and qcount in the header field
+    ans.header.qdcount = ans.header.ancount = query->header.qdcount;
     ans.header.misc1 =
-        create_misc1(QR_RESP, OPCODE_QUERY, AA_FALSE, TC_FALSE, RD_FALSE);
+        create_misc1(QR_RESP, OPCODE_QUERY, AA_TRUE, TC_FALSE, RD_FALSE);
     ans.header.misc2 = create_misc2(RA_FALSE, Z, RCODE_NO_ERROR);
 
-    ans.header.qdcount = 1;
-    ans.header.ancount = 1;
+    // allocates rooms for the answers
+    ans.answer = malloc(ans.header.qdcount * sizeof(struct resource_record*));
+    for (size_t i = 0; i < ans.header.qdcount; i++) {
+        ans.answer[i] = malloc(sizeof(struct resource_record));
+        memset(ans.answer[i], 0, sizeof(struct resource_record));
+    }
 
-    // answer setup
-    struct resource_record* ar = malloc(sizeof(struct resource_record));
-    struct message_question* mq = malloc(sizeof(struct message_question));
-    ans.answer = malloc(sizeof(struct resource_record*));
-    ans.question = malloc(sizeof(struct message_question*));
-    memset(ar, 0, sizeof(struct resource_record));
-    memset(mq, 0, sizeof(struct message_question));
+    for (int i = 0; i < query->header.qdcount; i++) {
+        if (!query->question[i]) {
+            LOG_ERR("bad query->question");
+            return -1;
+        }
+        // for each query, select the relay database
 
-    uint32_t dlen = domain_len(query->question[0]->qname);
-    mq->qname = malloc(dlen);
-    mq->qtype = query->question[0]->qtype;
-    mq->qclass = query->question[0]->qclass;
-    memcpy(mq->qname, query->question[0]->qname, dlen);
-    ar->name = malloc(dlen * sizeof(uint8_t));
-    memcpy(ar->name, query->question[0]->qname, dlen);
-    ar->type = RRTYPE_A;
-    ar->_class = RRCLASS_IN;
-    ar->ttl = 0;
-    ar->rdlength = 4;
-    ar->rdata = malloc(4 * sizeof(uint8_t));
-    uint32_t ip = 0xdcb52694;
-    ip = htonl(ip);
-    memcpy(ar->rdata, &ip, sizeof(ip));
+        const struct message_question* question = query->question[i];
+        print_question(question);
+        int dlen = domain_len(question->qname);
+        if (dlen < 0) {
+            return -1;
+        }
 
-    ans.answer[0] = ar;
-    ans.question[0] = mq;
+        struct resource_record* rrptr = select_database(question, dlen);
+
+        if (rrptr) {
+            // if record selected then copy it to answer
+            rr_copy(ans.answer[i], rrptr);
+        } else {
+            // TODO: find in the cache
+            LOG_ERR("look in the cache not implemented\n");
+            return -1;
+        }
+    }
     int msgsize = 0;
     if ((msgsize = message_to_u8(&ans, sendbuf)) < 0) {
         return -1;
