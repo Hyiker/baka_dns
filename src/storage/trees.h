@@ -16,8 +16,8 @@ struct node_element {
 // a wrapper for node_element
 // used to solve hash confliction
 struct linked_node {
-    struct node_element* element;
-    struct node_element* next;
+    struct node_element element;
+    struct linked_node* next;
 };
 // tree node is a hash bucket of node elements
 struct tree_node {

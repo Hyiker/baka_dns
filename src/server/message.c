@@ -342,3 +342,23 @@ inline uint8_t create_misc1(uint8_t qr, uint8_t opcode, uint8_t aa, uint8_t tc,
 inline uint8_t create_misc2(uint8_t ra, uint8_t z, uint8_t rcode) {
     return (ra << 7) & RA_MASK | (z << 4) & Z_MASK | rcode & RCODE_MASK;
 }
+struct resource_record* create_resource_record(uint8_t* name, uint16_t type,
+                                               uint16_t _class, uint32_t ttl,
+                                               uint16_t rdlength,
+                                               uint8_t* rdata) {
+    struct resource_record* rr = malloc(sizeof(struct resource_record));
+    int dlen = domain_len(name);
+    if (dlen == -1) {
+        LOG_ERR("err creating an rr");
+        exit(EXIT_FAILURE);
+    }
+    rr->name = malloc(dlen * sizeof(uint8_t));
+    rr->rdata = malloc(rdlength * sizeof(uint8_t));
+    memcpy(rr->name, name, dlen);
+    memcpy(rr->rdata, rdata, rdlength);
+    rr->type = type;
+    rr->_class = _class;
+    rr->ttl = ttl;
+    rr->rdlength = rdlength;
+    return rr;
+}
