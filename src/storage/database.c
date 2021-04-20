@@ -6,6 +6,17 @@
 #include "utils/logging.h"
 #define RR_BUF_MAX 1000
 struct database db = {0};
+static uint32_t ipv4_convert(uint8_t* src) {
+    const char s[] = ".";
+    uint32_t ret = 0;
+    char* token;
+    token = strtok(src, s);
+    while (token != NULL) {
+        ret = ret << 8 | atoi(token);
+        token = strtok(NULL, s);
+    }
+    return ret;
+}
 static int format_domain(uint8_t* dest, char* src) {
     const char s[] = ".";
     int n = 0, dlen = 0;
@@ -34,14 +45,12 @@ int init_database(const char* relay_file) {
     FILE* fp = NULL;
     fp = fopen(relay_file, "r");
     if (!fp) {
-        LOG_ERR("no such relay file `%s`", relay_file);
+        LOG_ERR("no such relay file `%s`\n", relay_file);
         return -1;
     }
     char domainbuf[1024], ipbuf[1024], formatd[DOMAIN_BUF_LEN], formatip[1024];
     while (fscanf(fp, "%s %s", ipbuf, domainbuf) != -1) {
-        uint8_t a, b, c, d;
-        sscanf(ipbuf, "%u.%u.%u.%u", &a, &b, &c, &d);
-        uint32_t ip = a << 24 | b << 16 | c << 8 | d;
+        uint32_t ip = ipv4_convert(ipbuf);
         ip = htonl(ip);
         memcpy(formatip, &ip, 4);
         int dlen = format_domain(formatd, domainbuf);

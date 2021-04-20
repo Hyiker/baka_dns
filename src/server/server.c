@@ -6,7 +6,7 @@
 #include "utils/logging.h"
 
 #ifndef MSG_CONFIRM
-#define MSG_CONFIRM MSG_OOB
+#define MSG_CONFIRM 0
 #endif  // !MSG_CONFIRM
 
 int dns_recv_handle(const uint8_t *buf, uint32_t size, struct message *msg) {
@@ -51,6 +51,7 @@ void listen_socket(
         memset(recvbuf, 0, sizeof(recvbuf));
         memset(&cliaddr, 0, sizeof(cliaddr));
         memset(sendbuf, 0, sizeof(sendbuf));
+        len = sizeof(cliaddr);
         nrecv = recvfrom(fd, (char *)recvbuf, UDP_BUFFER_SIZE, MSG_WAITALL,
                          (struct sockaddr *)&cliaddr, &len);
         struct message msgrcv;
@@ -62,6 +63,7 @@ void listen_socket(
         }
         sendto(fd, sendbuf, nsend, MSG_CONFIRM,
                (const struct sockaddr *)&cliaddr, len);
+        LOG_INFO("msg size %u sent\n", nsend);
         free_heap_message(&msgrcv);
     }
 }

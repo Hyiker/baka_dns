@@ -45,7 +45,6 @@ static int rr_copy(struct resource_record* dest,
     if (dlen < 0) {
         return -1;
     }
-
     dest->name = malloc(sizeof(uint8_t) * dlen);
     dest->rdata = malloc(sizeof(uint8_t) * src->rdlength);
     memcpy(dest->name, src->name, sizeof(uint8_t) * dlen);
@@ -71,8 +70,8 @@ int resolv_handle(uint8_t* sendbuf, uint32_t* ans_size,
     ans.header.misc2 = create_misc2(RA_FALSE, Z, RCODE_NO_ERROR);
 
     // allocates rooms for the answers
-    ans.answer = malloc(ans.header.qdcount * sizeof(struct resource_record*));
-    for (size_t i = 0; i < ans.header.qdcount; i++) {
+    ans.answer = malloc(ans.header.ancount * sizeof(struct resource_record*));
+    for (size_t i = 0; i < ans.header.ancount; i++) {
         ans.answer[i] = malloc(sizeof(struct resource_record));
         memset(ans.answer[i], 0, sizeof(struct resource_record));
     }
@@ -95,6 +94,7 @@ int resolv_handle(uint8_t* sendbuf, uint32_t* ans_size,
 
         if (rrptr) {
             // if record selected then copy it to answer
+            LOG_INFO("rr found\n");
             rr_copy(ans.answer[i], rrptr);
         } else {
             // TODO: find in the cache

@@ -229,6 +229,7 @@ int message_to_u8(const struct message* msg, uint8_t* dest) {
     uint32_t hsize = 0, qsize = 0, ansize = 0, nssize = 0, arsize = 0;
     // header
     dest += (hsize = msg_header_to_u8(&msg->header, dest));
+    LOG_INFO("header size: %u\n", hsize);
     // question
     if (msg->header.qdcount) {
         if (!msg->question) {
@@ -244,6 +245,7 @@ int message_to_u8(const struct message* msg, uint8_t* dest) {
             dest += (qsize = msg_question_to_u8(msg->question[i], dest));
         }
     }
+    LOG_INFO("question size: %u\n", qsize);
     // rr answer
     if (msg->header.ancount) {
         if (!msg->answer) {
@@ -356,6 +358,7 @@ struct resource_record* create_resource_record(uint8_t* name, uint16_t type,
     rr->rdata = malloc(rdlength * sizeof(uint8_t));
     memcpy(rr->name, name, dlen);
     memcpy(rr->rdata, rdata, rdlength);
+    LOG_INFO("%u.%u.%u.%u\n", rr->rdata[3], rr->rdata[2], rr->rdata[1], rr->rdata[0]);
     rr->type = type;
     rr->_class = _class;
     rr->ttl = ttl;
