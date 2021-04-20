@@ -27,13 +27,14 @@ struct tree_node {
 struct btree {
     struct tree_node* root;
     // hash function for a subdomain
-    uint32_t (*hash_fun)(uint8_t*);
+    uint32_t (*hash_fun)(const uint8_t*);
 };
 
-uint32_t rr_hash(uint8_t*);
-struct btree* tree_init(uint32_t (*hash_fun)(uint8_t*));
+uint32_t rr_hash(const uint8_t*);
+struct btree* tree_init(uint32_t (*hash_fun)(const uint8_t*));
 
-int tree_insert(struct btree*, struct resource_record*);
+// insert a rr into tree with reversed domain
+int tree_insert(struct btree*, const uint8_t*, struct resource_record*);
 
 // search a tree by domain and its length
 struct resource_record* tree_search(struct btree*, uint8_t*, uint32_t);

@@ -5,7 +5,7 @@
 #include "string.h"
 #include "utils/logging.h"
 #define HASH_SEED 131
-uint32_t rr_hash(uint8_t* ptr) {
+uint32_t rr_hash(const uint8_t* ptr) {
     // only hash by name
     // BKDR hash function
     uint32_t hsh = 0;
@@ -16,7 +16,7 @@ uint32_t rr_hash(uint8_t* ptr) {
     }
     return hsh & 0x7FFFFFFF;
 }
-struct btree* tree_init(uint32_t (*hash_fun)(uint8_t*)) {
+struct btree* tree_init(uint32_t (*hash_fun)(const uint8_t*)) {
     struct btree* bt = malloc(sizeof(struct btree));
     bt->hash_fun = hash_fun;
     bt->root = malloc(sizeof(struct tree_node));
@@ -24,7 +24,7 @@ struct btree* tree_init(uint32_t (*hash_fun)(uint8_t*)) {
     return bt;
 }
 static struct linked_node* hash_ll_find(
-    struct linked_node* bucket[HASH_BUCKET_SIZE], uint8_t* target) {
+    struct linked_node* bucket[HASH_BUCKET_SIZE], const uint8_t* target) {
     uint32_t index = rr_hash(target) % HASH_BUCKET_SIZE;
     struct linked_node* ln = bucket[index];
     while (ln) {
@@ -35,15 +35,14 @@ static struct linked_node* hash_ll_find(
     }
     return ln;
 }
-int tree_insert(struct btree* tree, struct resource_record* rr) {
-    // current domain name ptr
-    uint8_t* dptr = rr->name;
+int tree_insert(struct btree* tree, const uint8_t* rev_domain,
+                struct resource_record* rr) {
     // pointer to next domain
-    uint32_t next = *(dptr + (*dptr) + 1);
+    uint32_t next = *(rev_domain + (*rev_domain) + 1);
     // current tree node focusing
     struct tree_node* tn = tree->root;
-    while (*dptr) {
-        struct linked_node* ln = hash_ll_find(tn->bucket, dptr);
+    while (*rev_domain) {
+        struct linked_node* ln = hash_ll_find(tn->bucket, rev_domain);
         if (ln) {
             // node is found
             if (!next) {
@@ -53,23 +52,23 @@ int tree_insert(struct btree* tree, struct resource_record* rr) {
                     return -1;
                 } else {
                     ln->element.data = rr;
-                    strncpy(ln->element.domain, dptr, (*dptr) + 1);
+                    strncpy(ln->element.domain, rev_domain, (*rev_domain) + 1);
                     return 1;
                 }
             } else {
                 // continue to ln's child
-                dptr = dptr + (*dptr) + 1;
-                next = *(dptr + (*dptr) + 1);
+                rev_domain = rev_domain + (*rev_domain) + 1;
+                next = *(rev_domain + (*rev_domain) + 1);
                 tn = ln->element.child;
             }
         } else {
             // node is not found, create it
-            uint32_t index = rr_hash(dptr) % HASH_BUCKET_SIZE;
+            uint32_t index = tree->hash_fun(rev_domain) % HASH_BUCKET_SIZE;
             struct linked_node* new_node = malloc(sizeof(struct linked_node));
             memset(new_node, 0, sizeof(struct linked_node));
             new_node->next = tn->bucket[index];
             tn->bucket[index] = new_node;
-            memcpy(new_node->element.domain, dptr, (*dptr) + 1);
+            memcpy(new_node->element.domain, rev_domain, (*rev_domain) + 1);
             if (!next) {
                 // directly create a new linked node in the bucket
                 new_node->element.data = rr;
@@ -87,22 +86,20 @@ int tree_insert(struct btree* tree, struct resource_record* rr) {
 // search a tree by domain and its length
 struct resource_record* tree_search(struct btree* tree, uint8_t* domain,
                                     uint32_t dlen) {
-    // current domain name ptr
-    uint8_t* dptr = domain;
     // pointer to next domain
-    uint32_t next = *(dptr + (*dptr) + 1);
+    uint32_t next = *(domain + (*domain) + 1);
     // current tree node focusing
     struct tree_node* tn = tree->root;
-    while (*dptr) {
-        struct linked_node* ln = hash_ll_find(tn->bucket, dptr);
+    while (*domain) {
+        struct linked_node* ln = hash_ll_find(tn->bucket, domain);
         if (!ln) {
             return NULL;
         } else {
             if (!next) {
                 return ln->element.data;
             } else {
-                dptr = dptr + (*dptr) + 1;
-                next = *(dptr + (*dptr) + 1);
+                domain = domain + (*domain) + 1;
+                next = *(domain + (*domain) + 1);
                 tn = ln->element.child;
             }
         }

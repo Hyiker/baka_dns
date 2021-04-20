@@ -21,10 +21,10 @@ extern struct database db;
 // init database from relay file
 int init_database(const char*);
 
+// insert a rr into db
+int insert_database(struct resource_record* rr);
 // select database by a msg_question
-// with a domain_length
-// returns the const ptr to the rr
-struct resource_record* select_database(const struct message_question*,
-                                              uint32_t);
+// returns the ptr to the rr
+struct resource_record* select_database(const struct message_question*);
 
 #endif

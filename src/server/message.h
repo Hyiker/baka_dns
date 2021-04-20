@@ -108,4 +108,9 @@ int domain_len(const char*);
 // create from name, type, _class, ttl, rdlength, rdata
 struct resource_record* create_resource_record(uint8_t*, uint16_t, uint16_t,
                                                uint32_t, uint16_t, uint8_t*);
+
+// reverse a domain name
+// from 3 w w w 4 b u d u 2 c n 0
+// into 2 c n 4 b u d u 3 w w w 0
+void domain_rev(uint8_t*, uint8_t*);
 #endif

@@ -362,3 +362,27 @@ struct resource_record* create_resource_record(uint8_t* name, uint16_t type,
     rr->rdlength = rdlength;
     return rr;
 }
+
+void domain_rev(uint8_t* dest, uint8_t* src) {
+    char stack[DOMAIN_BUF_LEN] = {0};
+    int sptr = 0;
+    uint8_t n;
+    while ((n = *src)) {
+        for (size_t i = 1; i <= n; i++) {
+            stack[sptr++] = src[i];
+        }
+        src += n + 1;
+        stack[sptr++] = n;
+    }
+    sptr--;
+    uint32_t desti = 0;
+    while (sptr > 0 && (n = stack[sptr])) {
+        for (size_t i = 1; i <= n; i++) {
+            dest[i] = stack[sptr - n + i - 1];
+        }
+        dest[0] = n;
+        dest += n + 1;
+        sptr -= n + 1;
+    }
+    dest[0] = 0;
+}

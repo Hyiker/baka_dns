@@ -64,7 +64,8 @@ int resolv_handle(uint8_t* sendbuf, uint32_t* ans_size,
         // TODO: support recursive service
     }
     // set ancount and qcount in the header field
-    ans.header.qdcount = ans.header.ancount = query->header.qdcount;
+    //  TODO: copy question: ans.header.qdcount =
+    ans.header.ancount = query->header.qdcount;
     ans.header.misc1 =
         create_misc1(QR_RESP, OPCODE_QUERY, AA_TRUE, TC_FALSE, RD_FALSE);
     ans.header.misc2 = create_misc2(RA_FALSE, Z, RCODE_NO_ERROR);
@@ -90,7 +91,7 @@ int resolv_handle(uint8_t* sendbuf, uint32_t* ans_size,
             return -1;
         }
 
-        struct resource_record* rrptr = select_database(question, dlen);
+        struct resource_record* rrptr = select_database(question);
 
         if (rrptr) {
             // if record selected then copy it to answer
