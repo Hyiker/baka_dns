@@ -16,8 +16,8 @@ uint32_t rr_hash(const uint8_t* ptr) {
     }
     return hsh & 0x7FFFFFFF;
 }
-struct btree* tree_init(uint32_t (*hash_fun)(const uint8_t*)) {
-    struct btree* bt = malloc(sizeof(struct btree));
+struct bucket_tree* tree_init(uint32_t (*hash_fun)(const uint8_t*)) {
+    struct bucket_tree* bt = malloc(sizeof(struct bucket_tree));
     bt->hash_fun = hash_fun;
     bt->root = malloc(sizeof(struct tree_node));
     memset(bt->root, 0, sizeof(bt->root));
@@ -35,7 +35,7 @@ static struct linked_node* hash_ll_find(
     }
     return ln;
 }
-int tree_insert(struct btree* tree, const uint8_t* rev_domain,
+int tree_insert(struct bucket_tree* tree, const uint8_t* rev_domain,
                 struct resource_record* rr) {
     // pointer to next domain
     uint32_t next = *(rev_domain + (*rev_domain) + 1);
@@ -87,7 +87,7 @@ int tree_insert(struct btree* tree, const uint8_t* rev_domain,
 }
 
 // search a tree by domain and its length
-struct resource_record* tree_search(struct btree* tree, uint8_t* domain,
+struct resource_record* tree_search(struct bucket_tree* tree, uint8_t* domain,
                                     uint32_t dlen) {
     // pointer to next domain
     uint32_t next = *(domain + (*domain) + 1);

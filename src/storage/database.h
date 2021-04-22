@@ -14,7 +14,7 @@ struct db_node {
     struct resource_record* rr;
 };
 struct database {
-    struct btree* tree;
+    struct bucket_tree* tree;
 };
 
 extern struct database db;
