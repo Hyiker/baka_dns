@@ -1,8 +1,8 @@
 #include <string.h>
 
-#include "server/message.h"
-#include "server/resolv.h"
-#include "server/server.h"
+#include "storage/message.h"
+#include "socket/resolv.h"
+#include "socket/server.h"
 #include "storage/database.h"
 #include "utils/conf.h"
 #include "utils/logging.h"
@@ -11,6 +11,7 @@
 
 int main(int argc, char* argv[]) {
     if (parse_cmd(argc, argv, &conf) < 0) {
+        LOG_ERR("Bad cmd arguments\n");
         exit(EXIT_FAILURE);
     }
     LOG_INFO("Initializing server, using relay file `%s`...\n",

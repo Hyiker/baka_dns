@@ -10,7 +10,7 @@
 #include <unistd.h>
 
 #include "utils/conf.h"
-#include "message.h"
+#include "storage/message.h"
 
 #define UDP_BUFFER_SIZE 1024
 

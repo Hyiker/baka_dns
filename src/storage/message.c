@@ -1,4 +1,4 @@
-#include "server/message.h"
+#include "storage/message.h"
 
 #include <netinet/in.h>
 #include <stdio.h>

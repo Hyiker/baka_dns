@@ -2,7 +2,7 @@
 #define TREES_H
 #include <stdint.h>
 
-#include "server/message.h"
+#include "storage/message.h"
 #define HASH_BUCKET_SIZE 114
 #define SUBDOMAIN_MAX 50
 struct tree_node;

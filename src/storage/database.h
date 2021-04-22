@@ -2,7 +2,7 @@
 #define DATABASE_H
 #include <stdint.h>
 
-#include "server/message.h"
+#include "storage/message.h"
 #include "storage/trees.h"
 #define DB_NRR_MAX 100
 #define DB_ZONE_MAX 1000

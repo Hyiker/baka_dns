@@ -1,5 +1,5 @@
 
-#include "server/resolv.h"
+#include "socket/resolv.h"
 
 #include <arpa/inet.h>
 #include <stdio.h>
@@ -98,8 +98,10 @@ int resolv_handle(uint8_t* sendbuf, uint32_t* ans_size,
             rr_copy(ans.answer[i], rrptr);
         } else {
             // TODO: find in the cache
-            LOG_INFO("record not found, looking in the cache\n");
-            LOG_ERR("look in the cache not implemented\n");
+            // LOG_INFO("record not found, looking in the cache\n");
+            // LOG_ERR("look in the cache not implemented\n");
+            LOG_ERR("request external dns not implemented");
+            
             return -1;
         }
     }

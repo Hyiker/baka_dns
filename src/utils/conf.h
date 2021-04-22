@@ -7,6 +7,7 @@ struct dns_config {
     uint8_t verbose;
     uint8_t recursion_enabled;
     char *relay_file_path;
+    char *external_dns;
 };
 
 extern struct dns_config conf;
