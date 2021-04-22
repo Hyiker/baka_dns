@@ -11,6 +11,10 @@
         "conf.h": "c",
         "logging.h": "c",
         "database.h": "c",
-        "*.tcc": "c"
+        "*.tcc": "c",
+        "stdlib.h": "c"
+    },
+    "cmake.debugConfig": {
+        "args": ["-v", "--relay=/root/Projects/baka_dns/dnsrelay.txt"]
     }
 }

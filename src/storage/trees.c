@@ -48,7 +48,7 @@ int tree_insert(struct btree* tree, const uint8_t* rev_domain,
             if (!next) {
                 // final node found
                 if (ln->element.data) {
-                    LOG_ERR("duplicated resource record");
+                    LOG_ERR("duplicated resource record\n");
                     return -1;
                 } else {
                     ln->element.data = rr;
@@ -59,6 +59,9 @@ int tree_insert(struct btree* tree, const uint8_t* rev_domain,
                 // continue to ln's child
                 rev_domain = rev_domain + (*rev_domain) + 1;
                 next = *(rev_domain + (*rev_domain) + 1);
+                if (!ln->element.child) {
+                    ln->element.child = malloc(sizeof(struct tree_node));
+                }
                 tn = ln->element.child;
             }
         } else {

@@ -10,9 +10,12 @@
 #define UDP_PORT 53
 
 int main(int argc, char* argv[]) {
-    parse_cmd(argc, argv, &conf);
-    LOG_INFO("Initializing server...\n");
-    if (init_database("/Users/sidhch/Projects/baka_dns/dnsrelay.txt") < 0) {
+    if (parse_cmd(argc, argv, &conf) < 0) {
+        exit(EXIT_FAILURE);
+    }
+    LOG_INFO("Initializing server, using relay file `%s`...\n",
+             conf.relay_file_path);
+    if (init_database(conf.relay_file_path) < 0) {
         exit(EXIT_FAILURE);
     }
     int fd = create_socket(INADDR_ANY, UDP_PORT);

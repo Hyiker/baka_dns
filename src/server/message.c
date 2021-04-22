@@ -271,7 +271,7 @@ static void free_heap_message_question(struct message_question* mqptr) {
     free(mqptr);
 }
 
-static void free_heap_resource_record(struct resource_record* rrptr) {
+void free_heap_resource_record(struct resource_record* rrptr) {
     if (rrptr->name) {
         free(rrptr->name);
     }
@@ -358,7 +358,6 @@ struct resource_record* create_resource_record(uint8_t* name, uint16_t type,
     rr->rdata = malloc(rdlength * sizeof(uint8_t));
     memcpy(rr->name, name, dlen);
     memcpy(rr->rdata, rdata, rdlength);
-    LOG_INFO("%u.%u.%u.%u\n", rr->rdata[3], rr->rdata[2], rr->rdata[1], rr->rdata[0]);
     rr->type = type;
     rr->_class = _class;
     rr->ttl = ttl;

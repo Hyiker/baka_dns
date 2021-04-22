@@ -1,6 +1,7 @@
 #include "storage/database.h"
 
 #include <arpa/inet.h>
+#include <ctype.h>
 #include <stdlib.h>
 
 #include "utils/logging.h"
@@ -16,6 +17,12 @@ static uint32_t ipv4_convert(uint8_t* src) {
         token = strtok(NULL, s);
     }
     return ret;
+}
+void str_lower(char* str) {
+    while (*str) {
+        *str = tolower(*str);
+        str++;
+    }
 }
 static int format_domain(uint8_t* dest, char* src) {
     const char s[] = ".";
@@ -49,14 +56,19 @@ int init_database(const char* relay_file) {
         return -1;
     }
     char domainbuf[1024], ipbuf[1024], formatd[DOMAIN_BUF_LEN], formatip[1024];
-    while (fscanf(fp, "%s %s", ipbuf, domainbuf) != -1) {
+    uint32_t cnt = 0;
+    while (fscanf(fp, "%s%s", ipbuf, domainbuf) != -1) {
+        str_lower(domainbuf);
+        LOG_INFO("Inserting domain [%u]`%s`\n", ++cnt, domainbuf);
         uint32_t ip = ipv4_convert(ipbuf);
         ip = htonl(ip);
         memcpy(formatip, &ip, 4);
         int dlen = format_domain(formatd, domainbuf);
         struct resource_record* rr = create_resource_record(
             formatd, RRTYPE_A, RRCLASS_IN, 0, 4, formatip);
-        insert_database(rr);
+        if (insert_database(rr) < 0) {
+            free_heap_resource_record(rr);
+        }
     }
 
     return 1;

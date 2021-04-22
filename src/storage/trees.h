@@ -3,7 +3,7 @@
 #include <stdint.h>
 
 #include "server/message.h"
-#define HASH_BUCKET_SIZE 1145
+#define HASH_BUCKET_SIZE 114
 #define SUBDOMAIN_MAX 50
 struct tree_node;
 struct node_element {
