@@ -4,10 +4,7 @@
 
 #include "storage/database.h"
 #include "utils/logging.h"
-
-#ifndef MSG_CONFIRM
-#define MSG_CONFIRM 0
-#endif  // !MSG_CONFIRM
+#include "socket/socket.h"
 
 int dns_recv_handle(const uint8_t *buf, uint32_t size, struct message *msg) {
     int msgsig = message_from_buf(buf, size, msg);

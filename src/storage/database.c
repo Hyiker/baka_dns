@@ -5,19 +5,10 @@
 #include <stdlib.h>
 
 #include "utils/logging.h"
+#include "utils/utils.h"
 #define RR_BUF_MAX 1000
 struct database db = {0};
-static uint32_t ipv4_convert(uint8_t* src) {
-    const char s[] = ".";
-    uint32_t ret = 0;
-    char* token;
-    token = strtok(src, s);
-    while (token != NULL) {
-        ret = ret << 8 | atoi(token);
-        token = strtok(NULL, s);
-    }
-    return ret;
-}
+
 void str_lower(char* str) {
     while (*str) {
         *str = tolower(*str);
@@ -59,8 +50,11 @@ int init_database(const char* relay_file) {
     uint32_t cnt = 0;
     while (fscanf(fp, "%s%s", ipbuf, domainbuf) != -1) {
         str_lower(domainbuf);
-        LOG_INFO("Inserting domain [%u]`%s`\n", ++cnt, domainbuf);
-        uint32_t ip = ipv4_convert(ipbuf);
+        // LOG_INFO("Inserting domain [%u]`%s`\n", ++cnt, domainbuf);
+        uint32_t ip = 0;
+        if (ipv4_convert(ipbuf, &ip) < 0) {
+            return -1;
+        }
         ip = htonl(ip);
         memcpy(formatip, &ip, 4);
         int dlen = format_domain(formatd, domainbuf);
@@ -68,6 +62,7 @@ int init_database(const char* relay_file) {
             formatd, RRTYPE_A, RRCLASS_IN, 0, 4, formatip);
         if (insert_database(rr) < 0) {
             free_heap_resource_record(rr);
+            free(rr);
         }
     }
 

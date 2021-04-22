@@ -41,6 +41,18 @@ static void u16h_to_u8n(uint16_t h, uint8_t* ptr) {
     uint16_t dest = htons(h);
     memcpy(ptr, &dest, sizeof(h));
 }
+int rr_copy(struct resource_record* dest, const struct resource_record* src) {
+    memcpy(dest, src, sizeof(struct resource_record));
+    int dlen = domain_len(src->name);
+    if (dlen < 0) {
+        return -1;
+    }
+    dest->name = malloc(sizeof(uint8_t) * dlen);
+    dest->rdata = malloc(sizeof(uint8_t) * src->rdlength);
+    memcpy(dest->name, src->name, sizeof(uint8_t) * dlen);
+    memcpy(dest->rdata, src->rdata, sizeof(uint8_t) * src->rdlength);
+    return 1;
+}
 static void msg_header_from_buf(const uint8_t* buf,
                                 struct message_header* msg_header) {
     uint16_t id, qdcount, ancount, nscount, arcount;
@@ -272,14 +284,16 @@ static void free_heap_message_question(struct message_question* mqptr) {
 }
 
 void free_heap_resource_record(struct resource_record* rrptr) {
+    if (!rrptr) {
+        LOG_ERR("bad resource record pointer\n");
+    }
+
     if (rrptr->name) {
         free(rrptr->name);
     }
     if (rrptr->rdata) {
         free(rrptr->rdata);
     }
-
-    free(rrptr);
 }
 int free_heap_message(struct message* msgptr) {
     for (size_t i = 0; i < msgptr->header.qdcount; i++) {
@@ -298,6 +312,7 @@ int free_heap_message(struct message* msgptr) {
             return -1;
         }
         free_heap_resource_record(msgptr->answer[i]);
+        free(msgptr->answer[i]);
     }
     if (msgptr->answer) {
         free(msgptr->answer);
@@ -309,6 +324,7 @@ int free_heap_message(struct message* msgptr) {
             return -1;
         }
         free_heap_resource_record(msgptr->authority[i]);
+        free(msgptr->authority[i]);
     }
     if (msgptr->authority) {
         free(msgptr->authority);
@@ -320,6 +336,7 @@ int free_heap_message(struct message* msgptr) {
             return -1;
         }
         free_heap_resource_record(msgptr->addition[i]);
+        free(msgptr->addition[i]);
     }
     if (msgptr->addition) {
         free(msgptr->addition);
