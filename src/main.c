@@ -7,6 +7,7 @@
 #include "storage/message.h"
 #include "utils/conf.h"
 #include "utils/logging.h"
+#include "time.h"
 
 int main(int argc, char* argv[]) {
     srand(time(NULL));

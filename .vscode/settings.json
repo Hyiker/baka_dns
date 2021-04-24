@@ -15,6 +15,10 @@
         "stdlib.h": "c"
     },
     "cmake.debugConfig": {
-        "args": ["-v", "--relay=/root/Projects/baka_dns/dnsrelay.txt"]
+        "args": [
+            "-v",
+            "--relay=/root/Projects/baka_dns/dnsrelay.txt",
+            "172.22.208.1"
+        ]
     }
 }

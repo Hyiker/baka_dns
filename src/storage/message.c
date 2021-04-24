@@ -74,52 +74,76 @@ static void msg_header_from_buf(const uint8_t* buf,
     print_msg_header(msg_header);
 }
 // store domain from buf into dest
-// returns the length of domain name(includes the '\0')
+// returns the actual length of domain name(includes the '\0')
 // -1 if err
-static int read_domain(const uint8_t* buf, char* dest) {
-    int buf_domain_len = domain_len(buf);
-    if (buf_domain_len == -1 || buf_domain_len == 0u) {
-        LOG_ERR("bad domain length");
-        return -1;
+static int read_domain(const uint8_t* base, const uint8_t* src, char* dest,
+                       int32_t* _offset) {
+    int buf_domain_len = 1;
+    // we manually copy domain to support pointer
+    while (*src) {
+        if ((((*src) >> 6) & 0x3) == 0x3) {
+            uint8_t sr = ((*src) >> 6) & 0x3;
+            // pointer detected, make a recursive query
+            uint16_t offset =
+                (((uint16_t)*src) << 8 | ((uint16_t)(*(src + 1)))) & 0x3fff;
+            int _ = 0;
+            int dlen = read_domain(base, base + offset, dest, &_) - 1;
+            dest += dlen;
+            // the pointer actually provides 2 offsets
+            *_offset += 1;
+            src += 2;
+            buf_domain_len += dlen;
+            break;
+        } else {
+            *dest = *src;
+            dest++;
+            src++;
+            buf_domain_len++;
+            *_offset += 1;
+        }
     }
-
-    memcpy(dest, buf, buf_domain_len * sizeof(uint8_t));
+    *_offset += 1;
     return buf_domain_len;
 }
 // fetch message question info from buffer
 // this function allocates _qname_ on the heap!
 // returns n bytes it reads in _buf_
 // err if -1
-static int msg_question_from_buf(const uint8_t* buf,
+static int msg_question_from_buf(const uint8_t* base, const uint8_t* buf,
                                  struct message_question* msg_qd) {
     // with the last '\0'
-    uint8_t domainbuf[DOMAIN_BUF_LEN];
-    int qname_len = read_domain(buf, domainbuf);
+    uint8_t domainbuf[DOMAIN_BUF_LEN] = {0};
+    uint32_t offset = 0;
+    int qname_len = read_domain(base, buf, domainbuf, &offset);
     if (qname_len < 0) {
         return -1;
     }
 
     uint8_t* qname = malloc(qname_len * sizeof(uint8_t));
     memcpy(qname, domainbuf, qname_len * sizeof(uint8_t));
-    uint16_t qtype = u8n_to_u16h(buf + qname_len);
-    uint16_t qclass = u8n_to_u16h(buf + qname_len + sizeof(qtype));
+    uint16_t qtype = u8n_to_u16h(buf + offset);
+    uint16_t qclass = u8n_to_u16h(buf + offset + sizeof(qtype));
     msg_qd->qname = qname;
     msg_qd->qtype = qtype;
     msg_qd->qclass = qclass;
-    return qname_len + sizeof(qtype) + sizeof(qclass);
+    return offset + sizeof(qtype) + sizeof(qclass);
 }
 
-static int msg_rr_from_buf(const uint8_t* buf, struct resource_record* rr) {
-    uint8_t domainbuf[DOMAIN_BUF_LEN];
-    int name_len = read_domain(buf, domainbuf);
+static int msg_rr_from_buf(const uint8_t* base, const uint8_t* buf,
+                           struct resource_record* rr) {
+    // TODO: support for pointer
+    uint8_t domainbuf[DOMAIN_BUF_LEN] = {0};
+    int offset = 0;
+    int name_len = read_domain(base, buf, domainbuf, &offset);
     if (name_len < 0) {
         return -1;
     }
 
     uint8_t* name = malloc(name_len * sizeof(uint8_t));
     memcpy(name, domainbuf, name_len * sizeof(uint8_t));
-    uint16_t type, _class, ttl, rdlength;
-    type = u8n_to_u16h(buf += name_len);
+    uint32_t ttl;
+    uint16_t type, _class, rdlength;
+    type = u8n_to_u16h(buf += offset);
     _class = u8n_to_u16h(buf += sizeof(type));
     ttl = u8n_to_u16h(buf += sizeof(_class));
     rdlength = u8n_to_u16h(buf += sizeof(ttl));
@@ -136,6 +160,8 @@ static int msg_rr_from_buf(const uint8_t* buf, struct resource_record* rr) {
         "name = %s, type = %x, class = %x, ttl = %u, rdlength = %u, rdata = "
         "%s\n",
         name, type, _class, ttl, rdlength, rdata);
+    return offset + sizeof(type) + sizeof(_class) + sizeof(ttl) +
+           sizeof(rdlength) + rdlength;
 }
 int message_from_buf(const uint8_t* buf, uint32_t size, struct message* msg) {
     if (size < sizeof(struct message_header)) {
@@ -152,7 +178,7 @@ int message_from_buf(const uint8_t* buf, uint32_t size, struct message* msg) {
     }
     for (size_t i = 0; i < msg->header.qdcount; i++) {
         msg->question[i] = malloc(sizeof(struct message_question));
-        int n = msg_question_from_buf(bufptr, msg->question[i]);
+        int n = msg_question_from_buf(buf, bufptr, msg->question[i]);
         if (n < 0) {
             return -1;
         }
@@ -165,7 +191,7 @@ int message_from_buf(const uint8_t* buf, uint32_t size, struct message* msg) {
     }
     for (size_t i = 0; i < msg->header.ancount; i++) {
         msg->answer[i] = malloc(sizeof(struct resource_record));
-        int n = msg_rr_from_buf(bufptr, msg->answer[i]);
+        int n = msg_rr_from_buf(buf, bufptr, msg->answer[i]);
         if (n < 0) {
             return -1;
         }
@@ -178,7 +204,7 @@ int message_from_buf(const uint8_t* buf, uint32_t size, struct message* msg) {
     }
     for (size_t i = 0; i < msg->header.nscount; i++) {
         msg->authority[i] = malloc(sizeof(struct resource_record));
-        int n = msg_rr_from_buf(bufptr, msg->authority[i]);
+        int n = msg_rr_from_buf(buf, bufptr, msg->authority[i]);
         if (n < 0) {
             return -1;
         }
@@ -190,7 +216,7 @@ int message_from_buf(const uint8_t* buf, uint32_t size, struct message* msg) {
     }
     for (size_t i = 0; i < msg->header.arcount; i++) {
         msg->addition[i] = malloc(sizeof(struct resource_record));
-        int n = msg_rr_from_buf(bufptr, msg->addition[i]);
+        int n = msg_rr_from_buf(buf, bufptr, msg->addition[i]);
         if (n < 0) {
             return -1;
         }
@@ -245,7 +271,7 @@ int message_to_u8(const struct message* msg, uint8_t* dest) {
     // question
     if (msg->header.qdcount) {
         if (!msg->question) {
-            LOG_ERR("invalid question**");
+            LOG_ERR("invalid question**\n");
             return -1;
         }
 
@@ -368,7 +394,7 @@ struct resource_record* create_resource_record(uint8_t* name, uint16_t type,
     struct resource_record* rr = malloc(sizeof(struct resource_record));
     int dlen = domain_len(name);
     if (dlen == -1) {
-        LOG_ERR("err creating an rr");
+        LOG_ERR("err creating an rr\n");
         exit(EXIT_FAILURE);
     }
     rr->name = malloc(dlen * sizeof(uint8_t));

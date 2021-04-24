@@ -86,8 +86,8 @@ int resolv_handle(uint8_t* sendbuf, uint32_t* ans_size,
             // TODO: find in the cache
             // LOG_INFO("record not found, looking in the cache\n");
             // LOG_ERR("look in the cache not implemented\n");
-            LOG_ERR("request external dns not implemented");
             struct resource_record rr;
+            
             send_question(conf._external_dns, question, &rr);
             rr_copy(ans.answer[i], &rr);
             free_heap_resource_record(&rr);

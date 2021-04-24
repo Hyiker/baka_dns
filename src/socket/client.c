@@ -5,11 +5,12 @@
 #include <stdlib.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <unistd.h>
 
 #include "socket/socket.h"
 #include "utils/logging.h"
 
-int send_question(uint32_t ipaddr, struct message_question *question,
+int send_question(uint32_t ipaddr, const struct message_question *question,
                   struct resource_record *rr) {
     int sockfd;
     char buffer[CLIENT_BUFFER_SIZE];
@@ -26,12 +27,12 @@ int send_question(uint32_t ipaddr, struct message_question *question,
     // Filling server information
     servaddr.sin_family = AF_INET;
     servaddr.sin_port = htons(DNS_PORT);
-    servaddr.sin_addr.s_addr = ipaddr;
+    servaddr.sin_addr.s_addr = htonl(ipaddr);
 
     int n, len;
     struct message msg = {
         {(uint16_t)req_id,
-         create_misc1(QR_REQ, OPCODE_QUERY, AA_FALSE, TC_FALSE, RD_FALSE),
+         create_misc1(QR_REQ, OPCODE_QUERY, AA_TRUE, TC_FALSE, RD_FALSE),
          create_misc2(RA_FALSE, Z, RCODE_NO_ERROR)},
         0};
     msg.header.qdcount = 1;
@@ -52,10 +53,9 @@ int send_question(uint32_t ipaddr, struct message_question *question,
 
     n = recvfrom(sockfd, (char *)buffer, CLIENT_BUFFER_SIZE, MSG_WAITALL,
                  (struct sockaddr *)&servaddr, &len);
-    buffer[n] = '\0';
+    LOG_INFO("dns response received\n");
     message_from_buf(buffer, n, &msg);
     rr_copy(rr, msg.answer[0]);
     free_heap_message(&msg);
-    LOG_INFO("dns response received\n");
     close(sockfd);
 }
