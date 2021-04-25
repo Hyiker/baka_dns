@@ -55,6 +55,7 @@ int send_question(uint32_t ipaddr, const struct message_question *question,
                  (struct sockaddr *)&servaddr, &len);
     LOG_INFO("dns response received\n");
     message_from_buf(buffer, n, &msg);
+    // FIXME: segment fault when has no answer field
     rr_copy(rr, msg.answer[0]);
     free_heap_message(&msg);
     close(sockfd);

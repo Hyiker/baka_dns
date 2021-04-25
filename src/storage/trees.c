@@ -5,6 +5,16 @@
 #include "string.h"
 #include "utils/logging.h"
 #define HASH_SEED 131
+static struct tree_node* create_tree_node(){
+    struct tree_node* tn = malloc(sizeof(struct tree_node));
+    memset(tn, 0, sizeof(struct tree_node));
+    return tn;
+}
+static struct linked_node* create_linked_node(){
+    struct linked_node* ln = malloc(sizeof(struct linked_node));
+    memset(ln, 0, sizeof(struct linked_node));
+    return ln;
+}
 uint32_t rr_hash(const uint8_t* ptr) {
     // only hash by name
     // BKDR hash function
@@ -19,8 +29,7 @@ uint32_t rr_hash(const uint8_t* ptr) {
 struct bucket_tree* tree_init(uint32_t (*hash_fun)(const uint8_t*)) {
     struct bucket_tree* bt = malloc(sizeof(struct bucket_tree));
     bt->hash_fun = hash_fun;
-    bt->root = malloc(sizeof(struct tree_node));
-    memset(bt->root, 0, sizeof(bt->root));
+    bt->root = create_tree_node();
     return bt;
 }
 static struct linked_node* hash_ll_find(
@@ -60,15 +69,14 @@ int tree_insert(struct bucket_tree* tree, const uint8_t* rev_domain,
                 rev_domain = rev_domain + (*rev_domain) + 1;
                 next = *(rev_domain + (*rev_domain) + 1);
                 if (!ln->element.child) {
-                    ln->element.child = malloc(sizeof(struct tree_node));
+                    ln->element.child = create_tree_node();
                 }
                 tn = ln->element.child;
             }
         } else {
             // node is not found, create it
             uint32_t index = tree->hash_fun(rev_domain) % HASH_BUCKET_SIZE;
-            struct linked_node* new_node = malloc(sizeof(struct linked_node));
-            memset(new_node, 0, sizeof(struct linked_node));
+            struct linked_node* new_node = create_linked_node();
             new_node->next = tn->bucket[index];
             tn->bucket[index] = new_node;
             memcpy(new_node->element.domain, rev_domain, (*rev_domain) + 1);
@@ -78,9 +86,8 @@ int tree_insert(struct bucket_tree* tree, const uint8_t* rev_domain,
                 return 1;
             } else {
                 // create child for it otherwise
-                new_node->next = malloc(sizeof(struct linked_node));
-                memset(new_node->next, 0, sizeof(struct linked_node));
-                new_node->element.child = malloc(sizeof(struct tree_node));
+                new_node->next = create_linked_node();
+                new_node->element.child = create_tree_node();
             }
         }
     }
