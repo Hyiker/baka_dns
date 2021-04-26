@@ -88,7 +88,6 @@ int resolv_handle(uint8_t* sendbuf, uint32_t* ans_size, struct message* query) {
             // TODO: find in the cache
             // LOG_INFO("record not found, looking in the cache\n");
             // LOG_ERR("look in the cache not implemented\n");
-            struct resource_record rr;
 
             // if failed in the cache, forward all the request to external dns
             external_dns_flag = 1;

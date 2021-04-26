@@ -5,12 +5,12 @@
 #include "string.h"
 #include "utils/logging.h"
 #define HASH_SEED 131
-static struct tree_node* create_tree_node(){
+static struct tree_node* create_tree_node() {
     struct tree_node* tn = malloc(sizeof(struct tree_node));
     memset(tn, 0, sizeof(struct tree_node));
     return tn;
 }
-static struct linked_node* create_linked_node(){
+static struct linked_node* create_linked_node() {
     struct linked_node* ln = malloc(sizeof(struct linked_node));
     memset(ln, 0, sizeof(struct linked_node));
     return ln;
@@ -91,6 +91,7 @@ int tree_insert(struct bucket_tree* tree, const uint8_t* rev_domain,
             }
         }
     }
+    return 1;
 }
 
 // search a tree by domain and its length

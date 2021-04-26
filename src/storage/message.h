@@ -106,7 +106,7 @@ uint8_t create_misc2(uint8_t, uint8_t, uint8_t);
 // measure the len of a domain
 // normally, 0 <= ret <= DOMAIN_LEN_MAX
 // if the length is even greater than DOMAIN_BUF_LEN, returns -1
-int domain_len(const char*);
+int domain_len(const uint8_t*);
 
 // create from name, type, _class, ttl, rdlength, rdata
 struct resource_record* create_resource_record(uint8_t*, uint16_t, uint16_t,

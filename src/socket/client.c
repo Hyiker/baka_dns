@@ -13,7 +13,7 @@
 int send_question(uint32_t ipaddr, struct message *reqptr,
                   struct message *respptr) {
     int sockfd;
-    char buffer[CLIENT_BUFFER_SIZE];
+    uint8_t buffer[CLIENT_BUFFER_SIZE];
     struct sockaddr_in servaddr;
     uint16_t old_id = reqptr->header.id, new_id = (uint16_t)rand();
     // Creating socket file descriptor
@@ -29,7 +29,8 @@ int send_question(uint32_t ipaddr, struct message *reqptr,
     servaddr.sin_port = htons(DNS_PORT);
     servaddr.sin_addr.s_addr = htonl(ipaddr);
 
-    int n, len = sizeof(servaddr);
+    int n;
+    uint32_t len = sizeof(servaddr);
     reqptr->header.id = new_id;
     // FIXME
     n = message_to_u8(reqptr, buffer);
@@ -58,4 +59,5 @@ int send_question(uint32_t ipaddr, struct message *reqptr,
     respptr->header.id = old_id;
 
     close(sockfd);
+    return 1;
 }

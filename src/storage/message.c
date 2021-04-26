@@ -7,7 +7,8 @@
 
 #include "utils/logging.h"
 
-int domain_len(const char* domain) {
+// deprecated
+int domain_len(const uint8_t* domain) {
     int result = strnlen(domain, DOMAIN_BUF_LEN) + 1;
     if (result > DOMAIN_LEN_MAX) {
         LOG_ERR("domain len too loooooong\n");
@@ -411,6 +412,7 @@ int free_heap_message(struct message* msgptr) {
         free(msgptr->addition);
         msgptr->addition = NULL;
     }
+    return 1;
 }
 
 void print_msg_header(struct message_header* msg_header) {
@@ -424,12 +426,12 @@ void print_msg_header(struct message_header* msg_header) {
 }
 inline uint8_t create_misc1(uint8_t qr, uint8_t opcode, uint8_t aa, uint8_t tc,
                             uint8_t rd) {
-    return (qr << 7) & QR_MASK | (opcode << 3) & OPCODE_MASK |
-           (aa << 2) & AA_MASK | (tc << 1) & TC_MASK | rd & RD_MASK;
+    return ((qr << 7) & QR_MASK) | ((opcode << 3) & OPCODE_MASK) |
+           ((aa << 2) & AA_MASK) | ((tc << 1) & TC_MASK) | (rd & RD_MASK);
 }
 
 inline uint8_t create_misc2(uint8_t ra, uint8_t z, uint8_t rcode) {
-    return (ra << 7) & RA_MASK | (z << 4) & Z_MASK | rcode & RCODE_MASK;
+    return ((ra << 7) & RA_MASK) | ((z << 4) & Z_MASK) | (rcode & RCODE_MASK);
 }
 struct resource_record* create_resource_record(uint8_t* name, uint16_t type,
                                                uint16_t _class, uint32_t ttl,

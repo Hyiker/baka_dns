@@ -8,8 +8,9 @@ static struct argp_option options[] = {
     {0}};
 static char args_doc[] = "ARG1";
 static char doc[] = "A stupid dns relay";
-struct dns_config conf = {0, 0};
-char* default_relay_file = "relay.txt";
+struct dns_config conf;
+char default_relay_file[] = "relay.txt";
+char default_external_dns[] = "1.1.1.1";
 static error_t parse_opt(int key, char* arg, struct argp_state* state) {
     struct dns_config* ptrconf = state->input;
     switch (key) {
@@ -37,12 +38,13 @@ int parse_cmd(int argc, char** argv, struct dns_config* confptr) {
         confptr->relay_file_path = default_relay_file;
     }
     if (!confptr->external_dns) {
-        LOG_ERR("external dns server must be provided\n");
-        return -1;
+        LOG_INFO("no external dns provided, using default `%s`\n",
+                 default_external_dns);
+        confptr->external_dns = default_external_dns;
     } else {
         LOG_INFO("using external dns `%s`\n", confptr->external_dns);
     }
-    int ip;
+    uint32_t ip;
     if (ipv4_convert(confptr->external_dns, &ip) < 0) {
         LOG_ERR("invalid external dns addr\n");
         return -1;

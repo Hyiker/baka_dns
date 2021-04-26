@@ -6,10 +6,10 @@
 #define __FILENAME__ \
     (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 
-#define LOG_INFO(...) _LOG_INFO(__FILENAME__, __FUNCTION__, __VA_ARGS__)
+#define LOG_INFO(...) _LOG_INFO(__FILENAME__, __func__, __VA_ARGS__)
 
-#define PRINT_U8ARR(a, b) _PRINT_U8ARR(__FILENAME__, __FUNCTION__, a, b)
-#define LOG_ERR(...) _LOG_ERR(__FILENAME__, __FUNCTION__, __VA_ARGS__)
+#define PRINT_U8ARR(a, b) _PRINT_U8ARR(__FILENAME__, __func__, a, b)
+#define LOG_ERR(...) _LOG_ERR(__FILENAME__, __func__, __VA_ARGS__)
 // log format message into stdin if verbose
 // if verbose on, return 1
 // else return 0

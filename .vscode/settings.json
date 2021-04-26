@@ -18,7 +18,6 @@
         "args": [
             "-v",
             "--relay=/root/Projects/baka_dns/dnsrelay.txt",
-            "1.1.1.1"
         ]
     }
 }
