@@ -2,9 +2,9 @@
 
 #include <string.h>
 
+#include "socket/socket.h"
 #include "storage/database.h"
 #include "utils/logging.h"
-#include "socket/socket.h"
 
 int dns_recv_handle(const uint8_t *buf, uint32_t size, struct message *msg) {
     int msgsig = message_from_buf(buf, size, msg);
@@ -37,7 +37,7 @@ int create_socket(in_addr_t addr, uint16_t port) {
 
 void listen_socket(
     int fd, int (*recv_handle)(const uint8_t *, uint32_t, struct message *),
-    int (*resolv_handle)(uint8_t *, uint32_t *, const struct message *)) {
+    int (*resolv_handle)(uint8_t *, uint32_t *, struct message *)) {
     struct sockaddr_in cliaddr;
     int len, nrecv, nsend;
     char recvbuf[UDP_BUFFER_SIZE], sendbuf[UDP_BUFFER_SIZE];

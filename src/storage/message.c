@@ -131,7 +131,6 @@ static int msg_question_from_buf(const uint8_t* base, const uint8_t* buf,
 
 static int msg_rr_from_buf(const uint8_t* base, const uint8_t* buf,
                            struct resource_record* rr) {
-    // TODO: support for pointer
     uint8_t domainbuf[DOMAIN_BUF_LEN] = {0};
     int offset = 0;
     int name_len = read_domain(base, buf, domainbuf, &offset);
@@ -145,7 +144,7 @@ static int msg_rr_from_buf(const uint8_t* base, const uint8_t* buf,
     uint16_t type, _class, rdlength;
     type = u8n_to_u16h(buf += offset);
     _class = u8n_to_u16h(buf += sizeof(type));
-    ttl = u8n_to_u16h(buf += sizeof(_class));
+    ttl = u8n_to_u32h(buf += sizeof(_class));
     rdlength = u8n_to_u16h(buf += sizeof(ttl));
     buf += rdlength;
     uint8_t* rdata = malloc(rdlength * sizeof(uint8_t));
@@ -302,23 +301,31 @@ int message_to_u8(const struct message* msg, uint8_t* dest) {
     return hsize + qsize + ansize + nssize + arsize;
 }
 
-static void free_heap_message_question(struct message_question* mqptr) {
+void free_heap_message_question(struct message_question* mqptr) {
+    if (!mqptr) {
+        LOG_ERR("bad message question pointer\n");
+        return;
+    }
+
     if (mqptr->qname) {
         free(mqptr->qname);
+        mqptr->qname = NULL;
     }
-    free(mqptr);
 }
 
 void free_heap_resource_record(struct resource_record* rrptr) {
     if (!rrptr) {
         LOG_ERR("bad resource record pointer\n");
+        return;
     }
 
     if (rrptr->name) {
         free(rrptr->name);
+        rrptr->name = NULL;
     }
     if (rrptr->rdata) {
         free(rrptr->rdata);
+        rrptr->rdata = NULL;
     }
 }
 int free_heap_message(struct message* msgptr) {
@@ -328,9 +335,12 @@ int free_heap_message(struct message* msgptr) {
             return -1;
         }
         free_heap_message_question(msgptr->question[i]);
+        free(msgptr->question[i]);
+        msgptr->question[i] = NULL;
     }
     if (msgptr->question) {
         free(msgptr->question);
+        msgptr->question = NULL;
     }
     for (size_t i = 0; i < msgptr->header.ancount; i++) {
         if (!msgptr->answer || !msgptr->answer[i]) {
@@ -339,9 +349,11 @@ int free_heap_message(struct message* msgptr) {
         }
         free_heap_resource_record(msgptr->answer[i]);
         free(msgptr->answer[i]);
+        msgptr->answer[i] = NULL;
     }
     if (msgptr->answer) {
         free(msgptr->answer);
+        msgptr->answer = NULL;
     }
 
     for (size_t i = 0; i < msgptr->header.nscount; i++) {
@@ -351,9 +363,11 @@ int free_heap_message(struct message* msgptr) {
         }
         free_heap_resource_record(msgptr->authority[i]);
         free(msgptr->authority[i]);
+        msgptr->authority[i] = NULL;
     }
     if (msgptr->authority) {
         free(msgptr->authority);
+        msgptr->authority = NULL;
     }
 
     for (size_t i = 0; i < msgptr->header.arcount; i++) {
@@ -363,9 +377,11 @@ int free_heap_message(struct message* msgptr) {
         }
         free_heap_resource_record(msgptr->addition[i]);
         free(msgptr->addition[i]);
+        msgptr->addition[i] = NULL;
     }
     if (msgptr->addition) {
         free(msgptr->addition);
+        msgptr->addition = NULL;
     }
 }
 

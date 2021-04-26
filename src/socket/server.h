@@ -9,8 +9,8 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include "utils/conf.h"
 #include "storage/message.h"
+#include "utils/conf.h"
 
 #define UDP_BUFFER_SIZE 1024
 
@@ -24,7 +24,7 @@ int create_socket(in_addr_t, uint16_t);
 // then use send_handle to set content and size for the sendbuf
 void listen_socket(
     int, int (*recv_handle)(const uint8_t *, uint32_t, struct message *),
-    int (*resolv_handle)(uint8_t *, uint32_t *, const struct message *));
+    int (*resolv_handle)(uint8_t *, uint32_t *, struct message *));
 
 int dns_recv_handle(const uint8_t *, uint32_t, struct message *);
 

@@ -10,12 +10,12 @@
 #include "socket/socket.h"
 #include "utils/logging.h"
 
-int send_question(uint32_t ipaddr, const struct message_question *question,
-                  struct resource_record *rr) {
+int send_question(uint32_t ipaddr, struct message *reqptr,
+                  struct message *respptr) {
     int sockfd;
     char buffer[CLIENT_BUFFER_SIZE];
     struct sockaddr_in servaddr;
-    uint16_t req_id = (uint16_t)rand();
+    uint16_t old_id = reqptr->header.id, new_id = (uint16_t)rand();
     // Creating socket file descriptor
     if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
         LOG_ERR("client socket creation failed\n");
@@ -29,34 +29,34 @@ int send_question(uint32_t ipaddr, const struct message_question *question,
     servaddr.sin_port = htons(DNS_PORT);
     servaddr.sin_addr.s_addr = htonl(ipaddr);
 
-    int n, len;
-    struct message msg = {
-        {(uint16_t)req_id,
-         create_misc1(QR_REQ, OPCODE_QUERY, AA_TRUE, TC_FALSE, RD_FALSE),
-         create_misc2(RA_FALSE, Z, RCODE_NO_ERROR)},
-        0};
-    msg.header.qdcount = 1;
-    msg.question = malloc(sizeof(struct message_question *));
-    msg.question[0] = question;
-    n = message_to_u8(&msg, buffer);
+    int n, len = sizeof(servaddr);
+    reqptr->header.id = new_id;
+    // FIXME
+    n = message_to_u8(reqptr, buffer);
     if (n < 0) {
         LOG_ERR("invalid request message\n");
-        free(msg.question);
         return -1;
     }
-
     sendto(sockfd, buffer, n, MSG_CONFIRM, (const struct sockaddr *)&servaddr,
            sizeof(servaddr));
     LOG_INFO("dns request sent\n");
     memset(buffer, 0, sizeof(buffer));
-    memset(&msg, 0, sizeof(msg));
+    reqptr->header.id = old_id;
 
     n = recvfrom(sockfd, (char *)buffer, CLIENT_BUFFER_SIZE, MSG_WAITALL,
                  (struct sockaddr *)&servaddr, &len);
     LOG_INFO("dns response received\n");
-    message_from_buf(buffer, n, &msg);
-    // FIXME: segment fault when has no answer field
-    rr_copy(rr, msg.answer[0]);
-    free_heap_message(&msg);
+    if (n < 0) {
+        LOG_ERR("failed receiving resp\n");
+        return -1;
+    }
+
+    int s = message_from_buf(buffer, n, respptr);
+    if (s < 0) {
+        LOG_ERR("bad response data");
+        return -1;
+    }
+    respptr->header.id = old_id;
+
     close(sockfd);
 }

@@ -38,8 +38,7 @@ static int rr_match(const struct resource_record* rr,
            strncmp(rr->name, mq->qname, dlen);
 }
 
-int resolv_handle(uint8_t* sendbuf, uint32_t* ans_size,
-                  const struct message* query) {
+int resolv_handle(uint8_t* sendbuf, uint32_t* ans_size, struct message* query) {
     // setup the response message
     struct message ans;
     memset(&ans, 0, sizeof(ans));
@@ -57,10 +56,13 @@ int resolv_handle(uint8_t* sendbuf, uint32_t* ans_size,
 
     // allocates rooms for the answers
     ans.answer = malloc(ans.header.ancount * sizeof(struct resource_record*));
+    memset(ans.answer, 0,
+           sizeof(ans.header.ancount * sizeof(struct resource_record*)));
     for (size_t i = 0; i < ans.header.ancount; i++) {
         ans.answer[i] = malloc(sizeof(struct resource_record));
         memset(ans.answer[i], 0, sizeof(struct resource_record));
     }
+    int external_dns_flag = 0;
 
     for (int i = 0; i < query->header.qdcount; i++) {
         if (!query->question[i]) {
@@ -80,28 +82,31 @@ int resolv_handle(uint8_t* sendbuf, uint32_t* ans_size,
 
         if (rrptr) {
             // if record selected then copy it to answer
-            LOG_INFO("rr found\n");
+            LOG_INFO("Local Resource Record found\n");
             rr_copy(ans.answer[i], rrptr);
         } else {
             // TODO: find in the cache
             // LOG_INFO("record not found, looking in the cache\n");
             // LOG_ERR("look in the cache not implemented\n");
             struct resource_record rr;
-            
-            send_question(conf._external_dns, question, &rr);
-            rr_copy(ans.answer[i], &rr);
-            free_heap_resource_record(&rr);
+
+            // if failed in the cache, forward all the request to external dns
+            external_dns_flag = 1;
+            break;
         }
     }
+    if (external_dns_flag) {
+        free_heap_message(&ans);
+        send_question(conf._external_dns, query, &ans);
+    }
+
     int msgsize = 0;
     if ((msgsize = message_to_u8(&ans, sendbuf)) < 0) {
         return -1;
     }
     *ans_size = msgsize;
 
-    print_msg_header(&ans.header);
-    LOG_INFO("resp msg(%u): ", *ans_size);
-    PRINT_U8ARR(sendbuf, *ans_size);
+    // print_msg_header(&ans.header);
     free_heap_message(&ans);
     return 1;
 }
