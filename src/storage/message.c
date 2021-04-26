@@ -146,7 +146,7 @@ static int msg_rr_from_buf(const uint8_t* base, const uint8_t* buf,
     _class = u8n_to_u16h(buf += sizeof(type));
     ttl = u8n_to_u32h(buf += sizeof(_class));
     rdlength = u8n_to_u16h(buf += sizeof(ttl));
-    buf += rdlength;
+    buf += sizeof(rdlength);
     uint8_t* rdata = malloc(rdlength * sizeof(uint8_t));
     memcpy(rdata, buf, rdlength * sizeof(uint8_t));
     rr->name = name;
@@ -276,26 +276,54 @@ int message_to_u8(const struct message* msg, uint8_t* dest) {
 
         for (size_t i = 0; i < msg->header.qdcount; i++) {
             if (!msg->question[i]) {
-                LOG_ERR("invalid question*");
+                LOG_ERR("invalid question*\n");
                 return -1;
             }
-            dest += (qsize = msg_question_to_u8(msg->question[i], dest));
+            dest += (qsize += msg_question_to_u8(msg->question[i], dest));
         }
     }
     LOG_INFO("question size: %u\n", qsize);
     // rr answer
     if (msg->header.ancount) {
         if (!msg->answer) {
-            LOG_ERR("invalid answer**");
+            LOG_ERR("invalid answer**\n");
             return -1;
         }
 
         for (size_t i = 0; i < msg->header.ancount; i++) {
             if (!msg->answer[i]) {
-                LOG_ERR("invalid answer*");
+                LOG_ERR("invalid answer*\n");
                 return -1;
             }
-            dest += (ansize = msg_rr_to_u8(msg->answer[i], dest));
+            dest += (ansize += msg_rr_to_u8(msg->answer[i], dest));
+        }
+    }
+    if (msg->header.nscount) {
+        if (!msg->authority) {
+            LOG_ERR("invalid authority**\n");
+            return -1;
+        }
+
+        for (size_t i = 0; i < msg->header.nscount; i++) {
+            if (!msg->authority[i]) {
+                LOG_ERR("invalid authority*\n");
+                return -1;
+            }
+            dest += (nssize += msg_rr_to_u8(msg->authority[i], dest));
+        }
+    }
+    if (msg->header.arcount) {
+        if (!msg->addition) {
+            LOG_ERR("invalid addition**\n");
+            return -1;
+        }
+
+        for (size_t i = 0; i < msg->header.arcount; i++) {
+            if (!msg->addition[i]) {
+                LOG_ERR("invalid addition*\n");
+                return -1;
+            }
+            dest += (arsize += msg_rr_to_u8(msg->addition[i], dest));
         }
     }
     return hsize + qsize + ansize + nssize + arsize;

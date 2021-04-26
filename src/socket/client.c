@@ -51,8 +51,7 @@ int send_question(uint32_t ipaddr, struct message *reqptr,
         return -1;
     }
 
-    int s = message_from_buf(buffer, n, respptr);
-    if (s < 0) {
+    if (message_from_buf(buffer, n, respptr) < 0) {
         LOG_ERR("bad response data");
         return -1;
     }
