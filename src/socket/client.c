@@ -32,7 +32,6 @@ int send_question(uint32_t ipaddr, struct message *reqptr,
     int n;
     uint32_t len = sizeof(servaddr);
     reqptr->header.id = new_id;
-    // FIXME
     n = message_to_u8(reqptr, buffer);
     if (n < 0) {
         LOG_ERR("invalid request message\n");

@@ -1,12 +1,14 @@
-# baka_dns the domain name server
+# Baka the domain name server
 
 A definition-implemented Domain Name Server(Relay)
 
-## Feature
+## Roadmap
 
-- [ ] database
+- [x] database
+- [x] Base DNS relay Function(RFC1035, RFC1034)
 - [ ] cache
-- [ ] Base DNS relay Function(RFC1035, RFC1034)
+- [ ] RR Type support
+- [ ] concurrent support
 - [ ] EDNS(RFC2671)
 - [ ] DOT(RFC7858, RFC8310)
 
