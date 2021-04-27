@@ -7,7 +7,7 @@
 #include "utils/logging.h"
 #include "utils/utils.h"
 #define RR_BUF_MAX 1000
-struct database db = {0};
+struct database db;
 
 void str_lower(char* str) {
     while (*str) {
@@ -86,5 +86,5 @@ struct resource_record* select_database(const struct message_question* msgq) {
     }
     uint8_t revbuf[DOMAIN_BUF_LEN] = {0};
     domain_rev(revbuf, msgq->qname);
-    return tree_search(db.tree, revbuf, dlen);
+    return tree_search(db.tree, revbuf, dlen, msgq->qtype);
 }

@@ -4,7 +4,7 @@
 
 #include "string.h"
 #include "utils/logging.h"
-#define HASH_SEED 131
+#define HASH_SEED 131 
 static struct tree_node* create_tree_node() {
     struct tree_node* tn = malloc(sizeof(struct tree_node));
     memset(tn, 0, sizeof(struct tree_node));
@@ -50,17 +50,29 @@ int tree_insert(struct bucket_tree* tree, const uint8_t* rev_domain,
     uint32_t next = *(rev_domain + (*rev_domain) + 1);
     // current tree node focusing
     struct tree_node* tn = tree->root;
+    int element_index = -1;
+    switch (rr->type) {
+        case RRTYPE_A:
+            element_index = RR_ARR_A;
+            break;
+        case RRTYPE_CNAME:
+            element_index = RR_ARR_CNAME;
+            break;
+        default:
+            LOG_ERR("unsupported resource record insertion\n");
+            return -1;
+    }
     while (*rev_domain) {
         struct linked_node* ln = hash_ll_find(tn->bucket, rev_domain);
         if (ln) {
             // node is found
             if (!next) {
                 // final node found
-                if (ln->element.data) {
+                if (ln->element.data[element_index]) {
                     LOG_ERR("duplicated resource record\n");
                     return -1;
                 } else {
-                    ln->element.data = rr;
+                    ln->element.data[element_index] = rr;
                     strncpy(ln->element.domain, rev_domain, (*rev_domain) + 1);
                     return 1;
                 }
@@ -82,7 +94,7 @@ int tree_insert(struct bucket_tree* tree, const uint8_t* rev_domain,
             memcpy(new_node->element.domain, rev_domain, (*rev_domain) + 1);
             if (!next) {
                 // directly create a new linked node in the bucket
-                new_node->element.data = rr;
+                new_node->element.data[element_index] = rr;
                 return 1;
             } else {
                 // create child for it otherwise
@@ -96,7 +108,18 @@ int tree_insert(struct bucket_tree* tree, const uint8_t* rev_domain,
 
 // search a tree by domain and its length
 struct resource_record* tree_search(struct bucket_tree* tree, uint8_t* domain,
-                                    uint32_t dlen) {
+                                    uint32_t dlen, uint16_t rr_type) {
+    int element_index = -1;
+    switch (rr_type) {
+        case RRTYPE_A:
+            element_index = RR_ARR_A;
+            break;
+        case RRTYPE_CNAME:
+            element_index = RR_ARR_CNAME;
+            break;
+        default:
+            return NULL;
+    }
     // pointer to next domain
     uint32_t next = *(domain + (*domain) + 1);
     // current tree node focusing
@@ -107,7 +130,7 @@ struct resource_record* tree_search(struct bucket_tree* tree, uint8_t* domain,
             return NULL;
         } else {
             if (!next) {
-                return ln->element.data;
+                return ln->element.data[element_index];
             } else {
                 domain = domain + (*domain) + 1;
                 next = *(domain + (*domain) + 1);
