@@ -280,7 +280,9 @@ int message_to_u8(const struct message* msg, uint8_t* dest) {
                 LOG_ERR("invalid question*\n");
                 return -1;
             }
-            dest += (qsize += msg_question_to_u8(msg->question[i], dest));
+            int tmp = 0;
+            dest += (tmp += msg_question_to_u8(msg->question[i], dest));
+            qsize += tmp;
         }
     }
     LOG_INFO("question size: %u\n", qsize);
@@ -296,7 +298,9 @@ int message_to_u8(const struct message* msg, uint8_t* dest) {
                 LOG_ERR("invalid answer*\n");
                 return -1;
             }
-            dest += (ansize += msg_rr_to_u8(msg->answer[i], dest));
+            int tmp = 0;
+            dest += (tmp += msg_rr_to_u8(msg->answer[i], dest));
+            ansize += tmp;
         }
     }
     if (msg->header.nscount) {
@@ -310,7 +314,9 @@ int message_to_u8(const struct message* msg, uint8_t* dest) {
                 LOG_ERR("invalid authority*\n");
                 return -1;
             }
-            dest += (nssize += msg_rr_to_u8(msg->authority[i], dest));
+            int tmp = 0;
+            dest += (tmp += msg_rr_to_u8(msg->authority[i], dest));
+            nssize += tmp;
         }
     }
     if (msg->header.arcount) {
@@ -324,7 +330,9 @@ int message_to_u8(const struct message* msg, uint8_t* dest) {
                 LOG_ERR("invalid addition*\n");
                 return -1;
             }
-            dest += (arsize += msg_rr_to_u8(msg->addition[i], dest));
+            int tmp = 0;
+            dest += (tmp += msg_rr_to_u8(msg->addition[i], dest));
+            arsize += tmp;
         }
     }
     return hsize + qsize + ansize + nssize + arsize;

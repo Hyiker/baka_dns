@@ -40,7 +40,7 @@ void listen_socket(
     int (*resolv_handle)(uint8_t *, uint32_t *, struct message *)) {
     struct sockaddr_in cliaddr;
     int len, nrecv, nsend;
-    char recvbuf[UDP_BUFFER_SIZE], sendbuf[UDP_BUFFER_SIZE];
+    uint8_t recvbuf[UDP_BUFFER_SIZE], sendbuf[UDP_BUFFER_SIZE];
 
     len = sizeof(cliaddr);  // len is value/resuslt
 
