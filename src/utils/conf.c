@@ -10,7 +10,7 @@ static char args_doc[] = "ARG1";
 static char doc[] = "A stupid dns relay";
 struct dns_config conf;
 char default_relay_file[] = "relay.txt";
-char default_external_dns[] = "114.114.114.114";
+char default_external_dns[] = "10.3.179.118";
 static error_t parse_opt(int key, char* arg, struct argp_state* state) {
     struct dns_config* ptrconf = state->input;
     switch (key) {

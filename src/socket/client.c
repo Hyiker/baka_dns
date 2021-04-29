@@ -29,6 +29,16 @@ int send_question(uint32_t ipaddr, struct message *reqptr,
     servaddr.sin_port = htons(DNS_PORT);
     servaddr.sin_addr.s_addr = htonl(ipaddr);
 
+    // timeout options
+    struct timeval timeout;
+    timeout.tv_sec = 2;
+    timeout.tv_usec = 0;
+    if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout,
+                   sizeof(timeout) < 0)) {
+        LOG_ERR("bad timeout option\n");
+        return -1;
+    }
+
     int n;
     uint32_t len = sizeof(servaddr);
     reqptr->header.id = new_id;

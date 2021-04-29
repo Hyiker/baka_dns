@@ -267,7 +267,6 @@ int message_to_u8(const struct message* msg, uint8_t* dest) {
     uint32_t hsize = 0, qsize = 0, ansize = 0, nssize = 0, arsize = 0;
     // header
     dest += (hsize = msg_header_to_u8(&msg->header, dest));
-    LOG_INFO("header size: %u\n", hsize);
     // question
     if (msg->header.qdcount) {
         if (!msg->question) {
@@ -281,11 +280,10 @@ int message_to_u8(const struct message* msg, uint8_t* dest) {
                 return -1;
             }
             int tmp = 0;
-            dest += (tmp += msg_question_to_u8(msg->question[i], dest));
+            dest += (tmp = msg_question_to_u8(msg->question[i], dest));
             qsize += tmp;
         }
     }
-    LOG_INFO("question size: %u\n", qsize);
     // rr answer
     if (msg->header.ancount) {
         if (!msg->answer) {
@@ -299,7 +297,7 @@ int message_to_u8(const struct message* msg, uint8_t* dest) {
                 return -1;
             }
             int tmp = 0;
-            dest += (tmp += msg_rr_to_u8(msg->answer[i], dest));
+            dest += (tmp = msg_rr_to_u8(msg->answer[i], dest));
             ansize += tmp;
         }
     }
@@ -315,7 +313,7 @@ int message_to_u8(const struct message* msg, uint8_t* dest) {
                 return -1;
             }
             int tmp = 0;
-            dest += (tmp += msg_rr_to_u8(msg->authority[i], dest));
+            dest += (tmp = msg_rr_to_u8(msg->authority[i], dest));
             nssize += tmp;
         }
     }
@@ -331,7 +329,7 @@ int message_to_u8(const struct message* msg, uint8_t* dest) {
                 return -1;
             }
             int tmp = 0;
-            dest += (tmp += msg_rr_to_u8(msg->addition[i], dest));
+            dest += (tmp = msg_rr_to_u8(msg->addition[i], dest));
             arsize += tmp;
         }
     }
