@@ -1,6 +1,7 @@
 #include "storage/message.h"
 
 #include <netinet/in.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -447,7 +448,7 @@ struct resource_record* create_resource_record(uint8_t* name, uint16_t type,
     int dlen = domain_len(name);
     if (dlen == -1) {
         LOG_ERR("err creating an rr\n");
-        exit(EXIT_FAILURE);
+        pthread_exit(NULL);
     }
     rr->name = malloc(dlen * sizeof(uint8_t));
     rr->rdata = malloc(rdlength * sizeof(uint8_t));

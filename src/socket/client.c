@@ -2,6 +2,7 @@
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <pthread.h>
 #include <stdlib.h>
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -19,6 +20,7 @@ int send_question(uint32_t ipaddr, struct message *reqptr,
     // Creating socket file descriptor
     if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
         LOG_ERR("client socket creation failed\n");
+        pthread_exit(NULL);
         exit(EXIT_FAILURE);
     }
 
@@ -34,7 +36,7 @@ int send_question(uint32_t ipaddr, struct message *reqptr,
     timeout.tv_sec = 2;
     timeout.tv_usec = 0;
     if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout,
-                   sizeof(timeout) < 0)) {
+                   sizeof(timeout)) < 0) {
         LOG_ERR("bad timeout option\n");
         return -1;
     }

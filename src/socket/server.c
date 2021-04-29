@@ -52,7 +52,7 @@ static void resolv_and_respond(struct resolv_args *args) {
     len = sizeof(struct sockaddr_in);
     args->recv_handle(args->rcvbuffer, args->nrecv, &msgrcv);
     if (args->resolv_handle(sendbuf, &nsend, &msgrcv) < 0) {
-        exit(EXIT_FAILURE);
+        pthread_exit(NULL);
     }
     sendto(socket_fd, sendbuf, nsend, MSG_CONFIRM,
            (const struct sockaddr *)&args->cliaddr, len);
