@@ -10,6 +10,7 @@
 
 // deprecated
 int domain_len(const uint8_t* domain) {
+    // FIXME: remove this func
     int result = strnlen(domain, DOMAIN_BUF_LEN) + 1;
     if (result > DOMAIN_LEN_MAX) {
         LOG_ERR("domain len too loooooong\n");
@@ -43,6 +44,16 @@ static void u16h_to_u8n(uint16_t h, uint8_t* ptr) {
     uint16_t dest = htons(h);
     memcpy(ptr, &dest, sizeof(h));
 }
+int mq_copy(struct message_question* dest, const struct message_question* src) {
+    memcpy(dest, src, sizeof(struct message_question));
+    int dlen = domain_len(src->qname);
+    if (dlen < 0) {
+        return -1;
+    }
+    dest->qname = malloc(sizeof(uint8_t) * dlen);
+    memcpy(dest->qname, src->qname, dlen);
+    return 1;
+}
 int rr_copy(struct resource_record* dest, const struct resource_record* src) {
     memcpy(dest, src, sizeof(struct resource_record));
     int dlen = domain_len(src->name);
@@ -55,6 +66,7 @@ int rr_copy(struct resource_record* dest, const struct resource_record* src) {
     memcpy(dest->rdata, src->rdata, sizeof(uint8_t) * src->rdlength);
     return 1;
 }
+
 static void msg_header_from_buf(const uint8_t* buf,
                                 struct message_header* msg_header) {
     uint16_t id, qdcount, ancount, nscount, arcount;
@@ -368,7 +380,7 @@ int free_heap_message(struct message* msgptr) {
     for (size_t i = 0; i < msgptr->header.qdcount; i++) {
         if (!msgptr->question || !msgptr->question[i]) {
             LOG_ERR("invalid qdcount");
-            return -1;
+            break;
         }
         free_heap_message_question(msgptr->question[i]);
         free(msgptr->question[i]);
@@ -381,7 +393,7 @@ int free_heap_message(struct message* msgptr) {
     for (size_t i = 0; i < msgptr->header.ancount; i++) {
         if (!msgptr->answer || !msgptr->answer[i]) {
             LOG_ERR("invalid ancount");
-            return -1;
+            break;
         }
         free_heap_resource_record(msgptr->answer[i]);
         free(msgptr->answer[i]);
@@ -395,7 +407,7 @@ int free_heap_message(struct message* msgptr) {
     for (size_t i = 0; i < msgptr->header.nscount; i++) {
         if (!msgptr->authority || !msgptr->authority[i]) {
             LOG_ERR("invalid nscount");
-            return -1;
+            break;
         }
         free_heap_resource_record(msgptr->authority[i]);
         free(msgptr->authority[i]);
@@ -409,7 +421,7 @@ int free_heap_message(struct message* msgptr) {
     for (size_t i = 0; i < msgptr->header.arcount; i++) {
         if (!msgptr->addition || !msgptr->addition[i]) {
             LOG_ERR("invalid arcount");
-            return -1;
+            break;
         }
         free_heap_resource_record(msgptr->addition[i]);
         free(msgptr->addition[i]);

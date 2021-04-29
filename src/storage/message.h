@@ -84,6 +84,7 @@ struct message {
 // ret: non-neg is size of message
 // else means errors occur when converting
 int message_from_buf(const uint8_t*, uint32_t, struct message*);
+int mq_copy(struct message_question*, const struct message_question*);
 // copy resource record from _src_ into _dest_
 // attention: this function will automatically allocates mem for name & rdata
 // return -1 if failed else 1

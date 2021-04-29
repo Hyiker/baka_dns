@@ -21,7 +21,6 @@ int send_question(uint32_t ipaddr, struct message *reqptr,
     if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
         LOG_ERR("client socket creation failed\n");
         pthread_exit(NULL);
-        exit(EXIT_FAILURE);
     }
 
     memset(&servaddr, 0, sizeof(servaddr));

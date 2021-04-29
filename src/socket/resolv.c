@@ -41,14 +41,10 @@ static int rr_match(const struct resource_record* rr,
 int resolv_handle(uint8_t* sendbuf, uint32_t* ans_size, struct message* query) {
     // setup the response message
     struct message ans;
+    uint8_t failure_flag = RCODE_NO_ERROR;
     memset(&ans, 0, sizeof(ans));
     ans.header.id = query->header.id;
-    // clear the ra, currently not supported
-    if (_RD(query->header.misc1) && conf.recursion_enabled) {
-        // TODO: support recursive service
-    }
     // set ancount and qcount in the header field
-    //  TODO: copy question: ans.header.qdcount =
     ans.header.ancount = query->header.qdcount;
     ans.header.misc1 =
         create_misc1(QR_RESP, OPCODE_QUERY, AA_TRUE, TC_FALSE, RD_FALSE);
@@ -67,7 +63,8 @@ int resolv_handle(uint8_t* sendbuf, uint32_t* ans_size, struct message* query) {
     for (int i = 0; i < query->header.qdcount; i++) {
         if (!query->question[i]) {
             LOG_ERR("bad query->question");
-            return -1;
+            failure_flag = RCODE_FORMAT_ERROR;
+            break;
         }
         // for each query, select the relay database
 
@@ -75,7 +72,8 @@ int resolv_handle(uint8_t* sendbuf, uint32_t* ans_size, struct message* query) {
         print_question(question);
         int dlen = domain_len(question->qname);
         if (dlen < 0) {
-            return -1;
+            failure_flag = RCODE_FORMAT_ERROR;
+            break;
         }
 
         struct resource_record* rrptr = select_database(question);
@@ -95,9 +93,28 @@ int resolv_handle(uint8_t* sendbuf, uint32_t* ans_size, struct message* query) {
             break;
         }
     }
-    if (external_dns_flag) {
+    if (external_dns_flag && !failure_flag) {
         free_heap_message(&ans);
-        send_question(conf._external_dns, query, &ans);
+        if (send_question(conf._external_dns, query, &ans) < 0) {
+            // construct an error response
+            failure_flag = RCODE_SERVER_FAILURE;
+        }
+    }
+
+    if (failure_flag) {
+        free_heap_message(&ans);
+        ans.header.misc2 = create_misc2(RA_FALSE, Z, failure_flag);
+        ans.header.ancount = ans.header.arcount = ans.header.nscount = 0;
+    }
+    if (!external_dns_flag || failure_flag) {
+        // paste question in the response
+        ans.header.ancount = ans.header.qdcount = query->header.qdcount;
+        ans.question =
+            malloc(sizeof(struct message_question*) * ans.header.qdcount);
+        for (size_t i = 0; i < ans.header.qdcount; i++) {
+            ans.question[i] = malloc(sizeof(struct message_question));
+            mq_copy(ans.question[i], query->question[i]);
+        }
     }
 
     int msgsize = 0;
