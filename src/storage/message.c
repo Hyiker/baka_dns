@@ -496,3 +496,13 @@ void domain_rev(uint8_t* dest, uint8_t* src) {
     }
     dest[0] = 0;
 }
+
+uint8_t rr_cmp(struct resource_record* rr1, struct resource_record* rr2) {
+    uint8_t e = 1;
+    e = e && 0 == strncmp(rr1->name, rr2->name, domain_len(rr1->name));
+    e = e && rr1->rdlength == rr2->rdlength;
+    e = e && rr1->type == rr2->type;
+    e = e && rr1->_class == rr2->_class;
+    e = e && 0 == strncmp(rr1->rdata, rr2->rdata, rr1->rdlength);
+    return e;
+}

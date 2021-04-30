@@ -119,4 +119,7 @@ void free_heap_resource_record(struct resource_record*);
 // from 3 w w w 4 b u d u 2 c n 0
 // into 2 c n 4 b u d u 3 w w w 0
 void domain_rev(uint8_t*, uint8_t*);
+
+// compare two resource record
+uint8_t rr_cmp(struct resource_record*, struct resource_record*);
 #endif

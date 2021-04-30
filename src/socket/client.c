@@ -5,12 +5,13 @@
 #include <pthread.h>
 #include <stdlib.h>
 #include <sys/socket.h>
+#include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
 
 #include "socket/socket.h"
 #include "utils/logging.h"
-
+#define EXTERNAL_SECS_MAX 2
 int send_question(uint32_t ipaddr, struct message *reqptr,
                   struct message *respptr) {
     int sockfd;
@@ -32,11 +33,12 @@ int send_question(uint32_t ipaddr, struct message *reqptr,
 
     // timeout options
     struct timeval timeout;
-    timeout.tv_sec = 2;
+    timeout.tv_sec = 4;
     timeout.tv_usec = 0;
     if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout,
                    sizeof(timeout)) < 0) {
         LOG_ERR("bad timeout option\n");
+        close(sockfd);
         return -1;
     }
 
@@ -46,6 +48,7 @@ int send_question(uint32_t ipaddr, struct message *reqptr,
     n = message_to_u8(reqptr, buffer);
     if (n < 0) {
         LOG_ERR("invalid request message\n");
+        close(sockfd);
         return -1;
     }
     sendto(sockfd, buffer, n, MSG_CONFIRM, (const struct sockaddr *)&servaddr,
@@ -59,11 +62,13 @@ int send_question(uint32_t ipaddr, struct message *reqptr,
     LOG_INFO("dns response received\n");
     if (n < 0) {
         LOG_ERR("failed receiving resp\n");
+        close(sockfd);
         return -1;
     }
 
     if (message_from_buf(buffer, n, respptr) < 0) {
         LOG_ERR("bad response data");
+        close(sockfd);
         return -1;
     }
     respptr->header.id = old_id;

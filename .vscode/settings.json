@@ -12,7 +12,8 @@
         "logging.h": "c",
         "database.h": "c",
         "*.tcc": "c",
-        "stdlib.h": "c"
+        "stdlib.h": "c",
+        "cache.h": "c"
     },
     "cmake.debugConfig": {
         "args": [

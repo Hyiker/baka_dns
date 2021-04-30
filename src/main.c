@@ -3,11 +3,12 @@
 #include "socket/resolv.h"
 #include "socket/server.h"
 #include "socket/socket.h"
+#include "storage/cache.h"
 #include "storage/database.h"
 #include "storage/message.h"
+#include "time.h"
 #include "utils/conf.h"
 #include "utils/logging.h"
-#include "time.h"
 
 int main(int argc, char* argv[]) {
     srand(time(NULL));
@@ -20,6 +21,7 @@ int main(int argc, char* argv[]) {
     if (init_database(conf.relay_file_path) < 0) {
         exit(EXIT_FAILURE);
     }
+    init_cache();
     int fd = create_socket(INADDR_ANY, DNS_PORT);
     if (fd < 0) {
         exit(EXIT_FAILURE);
