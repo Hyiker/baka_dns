@@ -27,6 +27,7 @@ static struct rr_cache_linked_node* create_cache_node(
 
 int cache_find_rr(struct resource_record* dest, uint8_t* domain, uint16_t type,
                   uint16_t _class) {
+    pthread_mutex_lock(&cache.lock);
     // TODO: optimize performance
     struct rr_cache_linked_node* node = cache.dummy->next;
     int n = 0;
@@ -40,6 +41,7 @@ int cache_find_rr(struct resource_record* dest, uint8_t* domain, uint16_t type,
         }
         node = node->next;
     }
+    pthread_mutex_unlock(&cache.lock);
     return n;
 }
 // strictly match a specific rr
@@ -55,6 +57,7 @@ static struct rr_cache_linked_node* cache_match_ln(struct resource_record* rr) {
 }
 
 int cache_put_rr(struct resource_record* rr) {
+    pthread_mutex_lock(&cache.lock);
     struct rr_cache_linked_node* old = cache_match_ln(rr);
     // if an old one found, directly put it at the front
     if (old) {
@@ -80,6 +83,7 @@ int cache_put_rr(struct resource_record* rr) {
             new_node->next->last = new_node;
         }
     }
+    pthread_mutex_unlock(&cache.lock);
     return 1;
 }
 static void free_cache_linked_node(struct rr_cache_linked_node* node) {
@@ -93,6 +97,7 @@ static void free_cache_linked_node(struct rr_cache_linked_node* node) {
 }
 void refresh_cache() {
     while (1) {
+        pthread_mutex_lock(&cache.lock);
         struct timeval now;
         gettimeofday(&now, NULL);
 
@@ -136,6 +141,7 @@ void refresh_cache() {
                 break;
             }
         }
+        pthread_mutex_unlock(&cache.lock);
         sleep(1);
     }
 }
@@ -145,4 +151,5 @@ void init_cache() {
     cache.size = 0;
     // enabling timer for updating ttl
     pthread_create(&timer_thread, NULL, refresh_cache, NULL);
+    pthread_mutex_init(&cache.lock, NULL);
 }

@@ -6,6 +6,7 @@
 #include "socket/socket.h"
 #include "storage/database.h"
 #include "utils/logging.h"
+#include "utils/threadpool.h"
 int socket_fd = -1;
 struct resolv_args {
     struct sockaddr_in cliaddr;
@@ -43,7 +44,7 @@ int create_socket(in_addr_t addr, uint16_t port) {
     return sockfd;
 }
 
-static void resolv_and_respond(struct resolv_args *args) {
+static ssize_t resolv_and_respond(struct resolv_args *args) {
     uint32_t nsend = 0, len = 0;
     struct message msgrcv;
     uint8_t sendbuf[UDP_BUFFER_SIZE];
@@ -52,14 +53,15 @@ static void resolv_and_respond(struct resolv_args *args) {
     len = sizeof(struct sockaddr_in);
     args->recv_handle(args->rcvbuffer, args->nrecv, &msgrcv);
     if (args->resolv_handle(sendbuf, &nsend, &msgrcv) < 0) {
-        pthread_exit(NULL);
+        free(args);
+        return -1;
     }
     sendto(socket_fd, sendbuf, nsend, MSG_CONFIRM,
            (const struct sockaddr *)&args->cliaddr, len);
     LOG_INFO("msg size %u sent\n", nsend);
     free_heap_message(&msgrcv);
     free(args);
-    pthread_exit(NULL);
+    return 1;
 }
 static struct resolv_args *create_resolv_args(
     struct sockaddr_in *cliaddr, uint8_t rcvbuffer[UDP_BUFFER_SIZE], int nrecv,
@@ -88,9 +90,9 @@ void listen_socket(
         len = sizeof(cliaddr);
         nrecv = recvfrom(socket_fd, (char *)recvbuf, UDP_BUFFER_SIZE,
                          MSG_WAITALL, (struct sockaddr *)&cliaddr, &len);
-        pthread_t t1;
-        pthread_create(&t1, NULL, resolv_and_respond,
+        threadpool_add_job(
+            create_job(resolv_and_respond,
                        create_resolv_args(&cliaddr, recvbuf, nrecv, recv_handle,
-                                          resolv_handle));
+                                          resolv_handle)));
     }
 }

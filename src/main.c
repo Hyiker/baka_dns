@@ -9,6 +9,7 @@
 #include "time.h"
 #include "utils/conf.h"
 #include "utils/logging.h"
+#include "utils/threadpool.h"
 
 int main(int argc, char* argv[]) {
     srand(time(NULL));
@@ -22,6 +23,9 @@ int main(int argc, char* argv[]) {
         exit(EXIT_FAILURE);
     }
     init_cache();
+    if (init_threadpool() < 0) {
+        exit(EXIT_FAILURE);
+    }
     int fd = create_socket(INADDR_ANY, DNS_PORT);
     if (fd < 0) {
         exit(EXIT_FAILURE);

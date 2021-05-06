@@ -4,7 +4,7 @@
 
 #include "string.h"
 #include "utils/logging.h"
-#define HASH_SEED 131 
+#define HASH_SEED 131
 static struct tree_node* create_tree_node() {
     struct tree_node* tn = malloc(sizeof(struct tree_node));
     memset(tn, 0, sizeof(struct tree_node));
@@ -20,11 +20,10 @@ uint32_t rr_hash(const uint8_t* ptr) {
     // BKDR hash function
     uint32_t hsh = 0;
     size_t n = *ptr;
-    ptr++;
-    for (size_t i = 0; i < n; i++) {
-        hsh = hsh * HASH_SEED + (*ptr++);
+    for (size_t i = 0; i < n; i++, ptr++) {
+        hsh = hsh * HASH_SEED + *ptr;
     }
-    return hsh & 0x7FFFFFFF;
+    return hsh;
 }
 struct bucket_tree* tree_init(uint32_t (*hash_fun)(const uint8_t*)) {
     struct bucket_tree* bt = malloc(sizeof(struct bucket_tree));

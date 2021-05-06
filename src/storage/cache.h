@@ -2,6 +2,7 @@
 #define CACHE_H
 #include <sys/time.h>
 
+#include "pthread.h"
 #include "storage/message.h"
 #define CACHE_SIZE_MAX 64
 struct rr_cache_linked_node {
@@ -12,6 +13,7 @@ struct rr_cache_linked_node {
 struct rr_cache {
     struct rr_cache_linked_node* dummy;
     uint32_t size;
+    pthread_mutex_t lock;
 };
 
 extern struct rr_cache cache;

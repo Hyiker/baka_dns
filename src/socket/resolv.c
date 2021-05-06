@@ -97,13 +97,11 @@ int resolv_handle(uint8_t* sendbuf, uint32_t* ans_size, struct message* query) {
                 rr_copy(&ans_buffer[ans_cnt++], rrptr);
             } else {
                 rrptr = NULL;
+                LOG_INFO("Domain blocked\n");
             }
-
         } else {
             LOG_INFO("RR not found in local db\n");
-            // LOG_INFO("record not found, looking in the cache\n");
 
-            // if failed in the cache, forward all the request to external dns
             external_dns_flag = 1;
             break;
         }
