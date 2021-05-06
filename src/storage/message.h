@@ -5,6 +5,7 @@
 #include "utils/conf.h"
 #define DOMAIN_LEN_MAX 256
 #define DOMAIN_BUF_LEN 512
+#define RR_BUF_SIZE 512
 #define QR_REQ 0
 #define QR_RESP 1
 #define OPCODE_QUERY 0
@@ -34,6 +35,7 @@
 #define RRTYPE_HINFO 13
 #define RRTYPE_MX 15
 #define RRCLASS_IN 1
+#define RRTYPE_SOA 6
 
 #define QR_MASK 0x80
 #define OPCODE_MASK 0x78

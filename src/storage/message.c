@@ -161,8 +161,25 @@ static int msg_rr_from_buf(const uint8_t* base, const uint8_t* buf,
     ttl = u8n_to_u32h(buf += sizeof(_class));
     rdlength = u8n_to_u16h(buf += sizeof(ttl));
     buf += sizeof(rdlength);
-    uint8_t* rdata = malloc(rdlength * sizeof(uint8_t));
-    memcpy(rdata, buf, rdlength * sizeof(uint8_t));
+    uint8_t* rdata = NULL;
+    switch (type) {
+        case RRTYPE_SOA:
+            uint32_t real_rdlength = 0;
+            uint8_t rrbuf[RR_BUF_SIZE] = {0};
+            int mname_offset = 0, rname_offset = 0;
+            int mname_len = read_domain(base, buf, rrbuf, &mname_offset);
+            int rname_len = read_domain(base, buf += mname_offset,
+                                        rrbuf + mname_len, &rname_offset);
+            // TODO
+
+            break;
+
+        default:
+            malloc(rdlength * sizeof(uint8_t));
+            memcpy(rdata, buf, rdlength * sizeof(uint8_t));
+            break;
+    }
+
     rr->name = name;
     rr->_class = _class;
     rr->rdata = rdata;
