@@ -155,7 +155,7 @@ static int msg_rr_from_buf(const uint8_t* base, const uint8_t* buf,
     uint8_t* name = malloc(name_len * sizeof(uint8_t));
     memcpy(name, domainbuf, name_len * sizeof(uint8_t));
     uint32_t ttl;
-    uint16_t type, _class, rdlength;
+    uint16_t type, _class, rdlength, real_rdlength;
     type = u8n_to_u16h(buf += offset);
     _class = u8n_to_u16h(buf += sizeof(type));
     ttl = u8n_to_u32h(buf += sizeof(_class));
@@ -163,19 +163,23 @@ static int msg_rr_from_buf(const uint8_t* base, const uint8_t* buf,
     buf += sizeof(rdlength);
     uint8_t* rdata = NULL;
     switch (type) {
-        case RRTYPE_SOA:
-            uint32_t real_rdlength = 0;
+        case RRTYPE_SOA:;
             uint8_t rrbuf[RR_BUF_SIZE] = {0};
             int mname_offset = 0, rname_offset = 0;
             int mname_len = read_domain(base, buf, rrbuf, &mname_offset);
             int rname_len = read_domain(base, buf += mname_offset,
                                         rrbuf + mname_len, &rname_offset);
-            // TODO
-
+            memcpy(rrbuf + mname_len + rname_len,
+                   buf + mname_offset + rname_offset, sizeof(uint32_t) * 5);
+            real_rdlength = mname_len + rname_len + sizeof(uint32_t) * 5;
+            rdata = malloc(real_rdlength);
+            memcpy(rdata, rrbuf, real_rdlength);
+            LOG_INFO("real: %u, rdlen: %u\n", real_rdlength, rdlength);
             break;
 
         default:
-            malloc(rdlength * sizeof(uint8_t));
+            rdata = malloc(rdlength * sizeof(uint8_t));
+            real_rdlength = rdlength;
             memcpy(rdata, buf, rdlength * sizeof(uint8_t));
             break;
     }
@@ -185,9 +189,9 @@ static int msg_rr_from_buf(const uint8_t* base, const uint8_t* buf,
     rr->rdata = rdata;
     rr->type = type;
     rr->ttl = ttl;
-    rr->rdlength = rdlength;
+    rr->rdlength = real_rdlength;
     LOG_INFO(
-        "name = %s, type = %x, class = %x, ttl = %u, rdlength = %u, rdata = "
+        "name = %s, type = %u, class = %u, ttl = %u, rdlength = %u, rdata = "
         "%s\n",
         name, type, _class, ttl, rdlength, rdata);
     return offset + sizeof(type) + sizeof(_class) + sizeof(ttl) +
