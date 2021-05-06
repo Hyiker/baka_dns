@@ -97,7 +97,7 @@ int tree_insert(struct bucket_tree* tree, const uint8_t* rev_domain,
                 return 1;
             } else {
                 // create child for it otherwise
-                new_node->next = create_linked_node();
+                // new_node->next = create_linked_node();
                 new_node->element.child = create_tree_node();
             }
         }

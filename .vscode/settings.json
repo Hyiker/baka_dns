@@ -18,7 +18,7 @@
     "cmake.debugConfig": {
         "args": [
             "-v",
-            "--relay=/root/Projects/baka_dns/dnsrelay.txt",
+            "--relay=/root/tmp/myrelay.txt",
         ]
     }
 }
