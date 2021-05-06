@@ -122,4 +122,7 @@ void domain_rev(uint8_t*, uint8_t*);
 
 // compare two resource record
 uint8_t rr_cmp(struct resource_record*, struct resource_record*);
+
+// check if an resource record is blocked(ip=0.0.0.0)
+uint8_t check_blocked(struct resource_record*);
 #endif

@@ -92,6 +92,5 @@ void listen_socket(
         pthread_create(&t1, NULL, resolv_and_respond,
                        create_resolv_args(&cliaddr, recvbuf, nrecv, recv_handle,
                                           resolv_handle));
-        pthread_join(t1, NULL);
     }
 }

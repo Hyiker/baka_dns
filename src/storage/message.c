@@ -506,3 +506,7 @@ uint8_t rr_cmp(struct resource_record* rr1, struct resource_record* rr2) {
     e = e && 0 == strncmp(rr1->rdata, rr2->rdata, rr1->rdlength);
     return e;
 }
+
+uint8_t check_blocked(struct resource_record* rr) {
+    return *(uint32_t*)(rr->rdata) == 0;
+}

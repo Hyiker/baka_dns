@@ -34,6 +34,7 @@ static void print_question(const struct message_question* mqptr) {
     }
     LOG_INFO("requested domain: %s, qtype = %d\n", questionbuf, mqptr->qtype);
 }
+
 static int rr_match(const struct resource_record* rr,
                     const struct message_question* mq, uint32_t dlen) {
     return rr->type == mq->qtype && rr->_class == mq->qclass &&
@@ -90,9 +91,14 @@ int resolv_handle(uint8_t* sendbuf, uint32_t* ans_size, struct message* query) {
         struct resource_record* rrptr = select_database(question);
 
         if (rrptr) {
-            // if record selected then copy it to answer
-            LOG_INFO("Local Resource Record found\n");
-            rr_copy(&ans_buffer[ans_cnt++], rrptr);
+            if (!check_blocked(rrptr)) {
+                // if record selected then copy it to answer
+                LOG_INFO("Local Resource Record found\n");
+                rr_copy(&ans_buffer[ans_cnt++], rrptr);
+            } else {
+                rrptr = NULL;
+            }
+
         } else {
             LOG_INFO("RR not found in local db\n");
             // LOG_INFO("record not found, looking in the cache\n");
