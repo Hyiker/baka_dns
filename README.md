@@ -7,8 +7,8 @@ A definition-implemented Domain Name Server(Relay)
 - [x] database
 - [x] Base DNS relay Function(RFC1035, RFC1034)
 - [x] RR Type support
-- [ ] cache
-- [ ] concurrent support
+- [x] cache
+- [x] concurrent support
 - [ ] EDNS(RFC2671)
 - [ ] DOT(RFC7858, RFC8310)
 

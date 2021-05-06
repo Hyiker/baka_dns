@@ -1,6 +1,6 @@
 #ifndef CLIENT_H
 #define CLIENT_H
-#define CLIENT_BUFFER_SIZE 1024
+#define CLIENT_BUFFER_SIZE 4096
 #include "storage/message.h"
 // send a dns question to dest _ip_
 // use a preset message question

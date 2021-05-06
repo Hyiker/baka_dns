@@ -15,15 +15,17 @@ struct job {
 struct jobqueue {
     struct job* queue[N_THREADS_MAX];
     uint8_t len;
-    pthread_mutex_t joblock;
+    pthread_mutex_t job_mutex;
+    pthread_cond_t job_cv;
     uint8_t front, back;
 };
 
 struct threadpool {
-    // mark whether a thread is alive
-    uint8_t threads_alive[N_THREADS_MAX];
     pthread_t threads[N_THREADS_MAX];
+    uint8_t n_threads_free;
     uint8_t n_threads;
+    // condition variable to wake up threads for work
+    pthread_mutex_t cont_mutex;
     struct jobqueue queue;
 };
 

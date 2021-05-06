@@ -12,7 +12,7 @@
 #include "storage/message.h"
 #include "utils/conf.h"
 
-#define UDP_BUFFER_SIZE 1024
+#define UDP_BUFFER_SIZE 4096
 
 // create a socket with local _addr_ and _port_
 // the socket will be bind to local once it's created
