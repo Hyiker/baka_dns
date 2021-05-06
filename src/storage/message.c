@@ -26,14 +26,14 @@ static uint32_t u8n_to_u32h(const uint8_t* ptr) {
     return dest;
 }
 static uint16_t u8n_to_u16h(const uint8_t* ptr) {
-    uint16_t dest;
-    memcpy(&dest, ptr, sizeof(uint16_t));
+    uint16_t dest = *(uint16_t*)ptr;
+    // memcpy(&dest, ptr, sizeof(uint16_t));
     dest = ntohs(dest);
     return dest;
 }
 static uint8_t u8n_to_u8h(const uint8_t* ptr) {
-    uint8_t dest;
-    memcpy(&dest, ptr, sizeof(uint8_t));
+    uint8_t dest = *(uint8_t*)ptr;
+    // memcpy(&dest, ptr, sizeof(uint8_t));
     return dest;
 }
 static void u32h_to_u8n(uint32_t h, uint8_t* ptr) {
