@@ -4,7 +4,7 @@
 
 #include "pthread.h"
 #include "storage/message.h"
-#define CACHE_SIZE_MAX 64
+#define CACHE_SIZE_MAX 256
 struct rr_cache_linked_node {
     struct rr_cache_linked_node *next, *last;
     struct resource_record* element;

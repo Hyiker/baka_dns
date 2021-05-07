@@ -162,9 +162,10 @@ static int msg_rr_from_buf(const uint8_t* base, const uint8_t* buf,
     rdlength = u8n_to_u16h(buf += sizeof(ttl));
     buf += sizeof(rdlength);
     uint8_t* rdata = NULL;
+
+    uint8_t rrbuf[RR_BUF_SIZE] = {0};
     switch (type) {
         case RRTYPE_SOA:;
-            uint8_t rrbuf[RR_BUF_SIZE] = {0};
             int mname_offset = 0, rname_offset = 0;
             int mname_len = read_domain(base, buf, rrbuf, &mname_offset);
             int rname_len = read_domain(base, buf += mname_offset,
@@ -176,7 +177,14 @@ static int msg_rr_from_buf(const uint8_t* base, const uint8_t* buf,
             memcpy(rdata, rrbuf, real_rdlength);
             LOG_INFO("real: %u, rdlen: %u\n", real_rdlength, rdlength);
             break;
-
+        case RRTYPE_CNAME:;
+            int cname_offset = 0;
+            int cname_len = read_domain(base, buf, rrbuf, &cname_offset);
+            real_rdlength = cname_len;
+            rdata = malloc(real_rdlength);
+            memcpy(rdata, rrbuf, real_rdlength);
+            LOG_INFO("real: %u, rdlen: %u\n", real_rdlength, rdlength);
+            break;
         default:
             rdata = malloc(rdlength * sizeof(uint8_t));
             real_rdlength = rdlength;
