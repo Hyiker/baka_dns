@@ -11,7 +11,7 @@
 
 #include "socket/socket.h"
 #include "utils/logging.h"
-#define EXTERNAL_SECS_MAX 2
+#define EXTERNAL_SECS_MAX 4
 int send_question(uint32_t ipaddr, struct message *reqptr,
                   struct message *respptr) {
     int sockfd;
