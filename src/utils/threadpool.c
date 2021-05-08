@@ -22,6 +22,7 @@ static ssize_t queue_push(struct jobqueue* qptr, struct job* job) {
     qptr->queue[qptr->back] = job;
     qptr->len++;
     pthread_cond_signal(&threadpool.queue.job_cv);
+    return 1;
 }
 static struct job* queue_front(struct jobqueue* qptr) {
     if (qptr->len == 0) {
@@ -100,6 +101,7 @@ ssize_t init_threadpool() {
         }
     }
     threadpool.n_threads_free = threadpool.n_threads;
+    return 1;
 }
 
 ssize_t threadpool_add_job(struct job* job) {

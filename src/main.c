@@ -11,7 +11,7 @@
 #include "utils/logging.h"
 #include "utils/threadpool.h"
 
-int main(int argc, char* argv[]) {
+void init_storage(int argc, char* argv[]) {
     srand(time(NULL));
     if (parse_cmd(argc, argv, &conf) < 0) {
         LOG_ERR("Bad cmd arguments\n");
@@ -26,12 +26,21 @@ int main(int argc, char* argv[]) {
     if (init_threadpool() < 0) {
         exit(EXIT_FAILURE);
     }
-    int fd = create_socket(INADDR_ANY, DNS_PORT);
-    if (fd < 0) {
+}
+int main(int argc, char* argv[]) {
+    init_storage(argc, argv);
+    pthread_t thread_udp;
+    if (start_udp_server(&thread_udp) < 0) {
+        LOG_ERR("failed firing up udp server!\n");
         exit(EXIT_FAILURE);
     }
-    listen_socket(fd, dns_recv_handle, resolv_handle);
-    close(fd);
+    pthread_t thread_tls;
+    if (start_tls_server(&thread_tls) < 0) {
+        LOG_ERR("failed firing up tls server!\n");
+        exit(EXIT_FAILURE);
+    }
 
+    pthread_join(thread_udp, NULL);
+    pthread_join(thread_tls, NULL);
     return 0;
 }

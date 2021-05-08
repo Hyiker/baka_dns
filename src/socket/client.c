@@ -12,6 +12,7 @@
 #include "socket/socket.h"
 #include "utils/logging.h"
 #define EXTERNAL_SECS_MAX 4
+#define EXTERNAL_DNS_PORT 53
 int send_question(uint32_t ipaddr, struct message *reqptr,
                   struct message *respptr) {
     int sockfd;
@@ -28,7 +29,7 @@ int send_question(uint32_t ipaddr, struct message *reqptr,
 
     // Filling server information
     servaddr.sin_family = AF_INET;
-    servaddr.sin_port = htons(DNS_PORT);
+    servaddr.sin_port = htons(EXTERNAL_DNS_PORT);
     servaddr.sin_addr.s_addr = htonl(ipaddr);
 
     // timeout options
