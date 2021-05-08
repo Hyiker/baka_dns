@@ -1,8 +1,10 @@
 #include "socket/server.h"
 
+#include <openssl/err.h>
+#include <openssl/ssl.h>
+#include <pthread.h>
 #include <string.h>
 
-#include "pthread.h"
 #include "socket/resolv.h"
 #include "socket/socket.h"
 #include "storage/database.h"
@@ -22,14 +24,58 @@ struct responder_args {
     int fd;
     int (*recv_handle)(const uint8_t *, uint32_t, struct message *);
     int (*resolv_handle)(uint8_t *, uint32_t *, struct message *);
+    // dot only
+    SSL_CTX *ctx;
 };
+
+static void init_openssl() {
+    SSL_load_error_strings();
+    OpenSSL_add_ssl_algorithms();
+}
+
+static void cleanup_openssl() {
+    EVP_cleanup();
+}
+
+static SSL_CTX *create_context() {
+    const SSL_METHOD *method;
+    SSL_CTX *ctx;
+
+    method = SSLv23_server_method();
+
+    ctx = SSL_CTX_new(method);
+    if (!ctx) {
+        perror("Unable to create SSL context");
+        ERR_print_errors_fp(stderr);
+        exit(EXIT_FAILURE);
+    }
+
+    return ctx;
+}
+void configure_context(SSL_CTX *ctx) {
+    SSL_CTX_set_ecdh_auto(ctx, 1);
+
+    /* Set the key and cert */
+    if (SSL_CTX_use_certificate_file(ctx, "/root/tmp/cert.pem", SSL_FILETYPE_PEM) <= 0) {
+        ERR_print_errors_fp(stderr);
+        exit(EXIT_FAILURE);
+    }
+
+    if (SSL_CTX_use_PrivateKey_file(ctx, "/root/tmp/key.pem", SSL_FILETYPE_PEM) <= 0) {
+        ERR_print_errors_fp(stderr);
+        exit(EXIT_FAILURE);
+    }
+}
+
 static struct responder_args *create_responder_args(
     int fd, int (*recv_handle)(const uint8_t *, uint32_t, struct message *),
-    int (*resolv_handle)(uint8_t *, uint32_t *, struct message *)) {
+    int (*resolv_handle)(uint8_t *, uint32_t *, struct message *),
+    SSL_CTX *ctx) {
     struct responder_args *la = malloc(sizeof(struct responder_args));
     la->fd = fd;
     la->recv_handle = recv_handle;
     la->resolv_handle = resolv_handle;
+    la->ctx = ctx;
     return la;
 }
 int dns_recv_handle(const uint8_t *buf, uint32_t size, struct message *msg) {
@@ -135,13 +181,21 @@ static void tls_responder(struct responder_args *la) {
     memset(sendbuf, 0, sizeof(sendbuf));
     memset(&msgrcv, 0, sizeof(msgrcv));
     while (1) {
+        SSL *ssl;
         int clientfd = accept(la->fd, (struct sockaddr *)&addr, &len);
         if (clientfd < 0) {
             LOG_ERR("bad client file descriptor\n");
             break;
         }
+        ssl = SSL_new(la->ctx);
+        SSL_set_fd(ssl, clientfd);
+        if (SSL_accept(ssl) <= 0) {
+            ERR_print_errors_fp(stderr);
+            break;
+        }
 
-        int nrecv = recv(clientfd, recvbuf, sizeof(recvbuf), 0);
+        int nrecv = SSL_read(ssl, recvbuf, sizeof(recvbuf));
+
         LOG_INFO("[%d] Recv a request size %d through TLS\n", clientfd, nrecv);
         la->recv_handle(recvbuf + 2, nrecv - 2, &msgrcv);
 
@@ -151,13 +205,14 @@ static void tls_responder(struct responder_args *la) {
         }
         // the extra header payload
         *(uint16_t *)sendbuf = htons(nsend);
-        int tmp;
-        if ((tmp = send(clientfd, sendbuf, nsend + 2, 0)) < 0) {
+        if (SSL_write(ssl, sendbuf, nsend + 2) < 0) {
             LOG_ERR("TLS connection failed sending dns resp\n");
             break;
         }
+        SSL_shutdown(ssl);
+        SSL_free(ssl);
         close(clientfd);
-        LOG_INFO("message size %d sent\n", tmp);
+        LOG_INFO("message size %d sent\n", nsend);
     }
 
     free(la);
@@ -172,11 +227,16 @@ ssize_t start_udp_server(pthread_t *pt) {
     }
     pthread_create(
         pt, NULL, udp_responder,
-        create_responder_args(udp_fd, dns_recv_handle, resolv_handle));
+        create_responder_args(udp_fd, dns_recv_handle, resolv_handle, NULL));
     LOG_INFO("udp server is now running...\n");
     return 1;
 }
 ssize_t start_tls_server(pthread_t *pt) {
+    SSL_CTX *ctx;
+    init_openssl();
+    ctx = create_context();
+    configure_context(ctx);
+
     int tls_fd = create_socket(INADDR_ANY, TCP_PORT, SOCK_STREAM);
     if (tls_fd < 0) {
         LOG_ERR("failed creating tls server!\n");
@@ -184,7 +244,7 @@ ssize_t start_tls_server(pthread_t *pt) {
     }
     pthread_create(
         pt, NULL, tls_responder,
-        create_responder_args(tls_fd, dns_recv_handle, resolv_handle));
+        create_responder_args(tls_fd, dns_recv_handle, resolv_handle, ctx));
     LOG_INFO("tls server is now running...\n");
     return 1;
 }

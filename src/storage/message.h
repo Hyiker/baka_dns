@@ -19,7 +19,7 @@
 #define RD_FALSE 0
 #define RA_TRUE 1
 #define RA_FALSE 0
-#define Z 0
+#define Z_FLAG 0
 
 #define RCODE_NO_ERROR 0
 #define RCODE_FORMAT_ERROR 1

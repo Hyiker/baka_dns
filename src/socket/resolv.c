@@ -49,7 +49,7 @@ int resolv_handle(uint8_t* sendbuf, uint32_t* ans_size, struct message* query) {
     ans.header.id = query->header.id;
     ans.header.misc1 =
         create_misc1(QR_RESP, OPCODE_QUERY, AA_TRUE, TC_FALSE, RD_FALSE);
-    ans.header.misc2 = create_misc2(RA_FALSE, Z, RCODE_NO_ERROR);
+    ans.header.misc2 = create_misc2(RA_FALSE, Z_FLAG, RCODE_NO_ERROR);
 
     struct resource_record ans_buffer[ANCOUNT_MAX] = {0};
     int external_dns_flag = 0;
@@ -134,7 +134,7 @@ int resolv_handle(uint8_t* sendbuf, uint32_t* ans_size, struct message* query) {
     }
     if (failure_flag) {
         free_heap_message(&ans);
-        ans.header.misc2 = create_misc2(RA_FALSE, Z, failure_flag);
+        ans.header.misc2 = create_misc2(RA_FALSE, Z_FLAG, failure_flag);
         ans.header.ancount = ans.header.arcount = ans.header.nscount = 0;
     }
     if (!external_dns_flag || failure_flag) {
