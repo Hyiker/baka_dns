@@ -4,9 +4,10 @@
 #include "utils/utils.h"
 static struct argp_option options[] = {
     {"verbose", 'v', 0, OPTION_ARG_OPTIONAL, "Produce verbose output"},
+    {"dot", 't', 0, OPTION_ARG_OPTIONAL, "Enable DNS over TLS"},
     {"relay", 'r', "relay", 0, "Specify a relay file path"},
     {0}};
-static char args_doc[] = "ARG1";
+static char args_doc[] = "ARG1 [-OPT]";
 static char doc[] = "A stupid dns relay";
 struct dns_config conf;
 char default_relay_file[] = "relay.txt";
@@ -17,6 +18,8 @@ static error_t parse_opt(int key, char* arg, struct argp_state* state) {
         case 'v':
             ptrconf->verbose = 1;
             break;
+        case 't':
+            ptrconf->dot_enable = 1;
         case 'r':
             ptrconf->relay_file_path = arg;
             break;

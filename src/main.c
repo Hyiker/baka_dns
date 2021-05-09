@@ -34,13 +34,15 @@ int main(int argc, char* argv[]) {
         LOG_ERR("failed firing up udp server!\n");
         exit(EXIT_FAILURE);
     }
-    pthread_t thread_tls;
-    if (start_tls_server(&thread_tls) < 0) {
-        LOG_ERR("failed firing up tls server!\n");
-        exit(EXIT_FAILURE);
+    if (conf.dot_enable) {
+        pthread_t thread_tls;
+        if (start_tls_server(&thread_tls) < 0) {
+            LOG_ERR("failed firing up tls server!\n");
+            exit(EXIT_FAILURE);
+        }
+        pthread_join(thread_tls, NULL);
     }
-
     pthread_join(thread_udp, NULL);
-    pthread_join(thread_tls, NULL);
+
     return 0;
 }

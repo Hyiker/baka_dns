@@ -12,6 +12,9 @@
 #include "utils/logging.h"
 #include "utils/threadpool.h"
 #define TCP_QUEUE_CNT 10
+#define SSL_PASSPHRASE "114514"
+#define SSL_CERT_PATH "/root/tmp/cert.pem"
+#define SSL_KEY_PATH "/root/tmp/key.pem"
 int socket_fd = -1;
 struct resolv_args {
     struct sockaddr_in cliaddr;
@@ -19,6 +22,10 @@ struct resolv_args {
     int nrecv;
     int (*recv_handle)(const uint8_t *, uint32_t, struct message *);
     int (*resolv_handle)(uint8_t *, uint32_t *, struct message *);
+    // dot only
+    SSL_CTX *ctx;
+    // dot only
+    int clientfd;
 };
 struct responder_args {
     int fd;
@@ -52,16 +59,23 @@ static SSL_CTX *create_context() {
 
     return ctx;
 }
+int my_pem_passwd_cb(char *buf, int size, int rwflag, void *userdata) {
+    // using an explict passphrase
+    strcpy(buf, SSL_PASSPHRASE);
+    return strlen(buf);
+}
+
 void configure_context(SSL_CTX *ctx) {
     SSL_CTX_set_ecdh_auto(ctx, 1);
 
     /* Set the key and cert */
-    if (SSL_CTX_use_certificate_file(ctx, "/root/tmp/cert.pem", SSL_FILETYPE_PEM) <= 0) {
+    if (SSL_CTX_use_certificate_file(ctx, SSL_CERT_PATH, SSL_FILETYPE_PEM) <=
+        0) {
         ERR_print_errors_fp(stderr);
         exit(EXIT_FAILURE);
     }
-
-    if (SSL_CTX_use_PrivateKey_file(ctx, "/root/tmp/key.pem", SSL_FILETYPE_PEM) <= 0) {
+    SSL_CTX_set_default_passwd_cb(ctx, my_pem_passwd_cb);
+    if (SSL_CTX_use_PrivateKey_file(ctx, SSL_KEY_PATH, SSL_FILETYPE_PEM) <= 0) {
         ERR_print_errors_fp(stderr);
         exit(EXIT_FAILURE);
     }
@@ -135,16 +149,65 @@ static ssize_t resolv_and_respond(struct resolv_args *args) {
     free(args);
     return 1;
 }
+
+static ssize_t ssl_resolv_and_respond(struct resolv_args *args) {
+    struct message msgrcv;
+    int nsend = 0;
+    uint8_t recvbuf[TLS_BUFFER_SIZE], sendbuf[TLS_BUFFER_SIZE];
+    memset(recvbuf, 0, sizeof(recvbuf));
+    memset(sendbuf, 0, sizeof(sendbuf));
+    memset(&msgrcv, 0, sizeof(msgrcv));
+    SSL *ssl;
+    ssl = SSL_new(args->ctx);
+    SSL_set_fd(ssl, args->clientfd);
+    if (SSL_accept(ssl) <= 0) {
+        ERR_print_errors_fp(stderr);
+        free(args);
+        return -1;
+    }
+
+    int nrecv = SSL_read(ssl, recvbuf, sizeof(recvbuf));
+
+    LOG_INFO("Recv a request size %d through TLS\n", nrecv);
+    args->recv_handle(recvbuf + 2, nrecv - 2, &msgrcv);
+
+    if (args->resolv_handle(sendbuf + 2, &nsend, &msgrcv) < 0) {
+        LOG_ERR("resolv failed for TLS Server\n");
+        free(args);
+    }
+    // the extra header payload
+    *(uint16_t *)sendbuf = htons(nsend);
+    if (SSL_write(ssl, sendbuf, nsend + 2) < 0) {
+        LOG_ERR("TLS connection failed sending dns resp\n");
+        free(args);
+        return -1;
+    }
+    SSL_shutdown(ssl);
+    SSL_free(ssl);
+    close(args->clientfd);
+    LOG_INFO("message size %d sent\n", nsend);
+    free(args);
+    return 1;
+}
+
 static struct resolv_args *create_resolv_args(
     struct sockaddr_in *cliaddr, uint8_t rcvbuffer[UDP_BUFFER_SIZE], int nrecv,
     int (*recv_handle)(const uint8_t *, uint32_t, struct message *),
-    int (*resolv_handle)(uint8_t *, uint32_t *, struct message *)) {
+    int (*resolv_handle)(uint8_t *, uint32_t *, struct message *), SSL_CTX *ctx,
+    int clientfd) {
     struct resolv_args *args = malloc(sizeof(struct resolv_args));
-    memcpy(&args->cliaddr, cliaddr, sizeof(struct sockaddr_in));
-    memcpy(args->rcvbuffer, rcvbuffer, sizeof(args->rcvbuffer));
+    if (cliaddr) {
+        memcpy(&args->cliaddr, cliaddr, sizeof(struct sockaddr_in));
+    }
+    if (rcvbuffer) {
+        memcpy(args->rcvbuffer, rcvbuffer, sizeof(args->rcvbuffer));
+    }
+
     args->nrecv = nrecv;
     args->recv_handle = recv_handle;
     args->resolv_handle = resolv_handle;
+    args->ctx = ctx;
+    args->clientfd = clientfd;
     return args;
 }
 static void udp_responder(struct responder_args *la) {
@@ -161,58 +224,29 @@ static void udp_responder(struct responder_args *la) {
         nrecv = recvfrom(socket_fd, (char *)recvbuf, UDP_BUFFER_SIZE,
                          MSG_WAITALL, (struct sockaddr *)&cliaddr, &len);
         LOG_INFO("Recv a request through UDP\n");
-        threadpool_add_job(
-            create_job(resolv_and_respond,
-                       create_resolv_args(&cliaddr, recvbuf, nrecv,
-                                          la->recv_handle, la->resolv_handle)));
+        threadpool_add_job(create_job(
+            resolv_and_respond,
+            create_resolv_args(&cliaddr, recvbuf, nrecv, la->recv_handle,
+                               la->resolv_handle, NULL, 0)));
     }
     free(la);
     close(la->fd);
 }
 
 static void tls_responder(struct responder_args *la) {
-    uint8_t recvbuf[TLS_BUFFER_SIZE], sendbuf[TLS_BUFFER_SIZE];
-    struct message msgrcv;
     struct sockaddr_in addr;
 
-    int nsend = 0;
     uint32_t len = sizeof(addr);
-    memset(recvbuf, 0, sizeof(recvbuf));
-    memset(sendbuf, 0, sizeof(sendbuf));
-    memset(&msgrcv, 0, sizeof(msgrcv));
     while (1) {
-        SSL *ssl;
         int clientfd = accept(la->fd, (struct sockaddr *)&addr, &len);
         if (clientfd < 0) {
             LOG_ERR("bad client file descriptor\n");
-            break;
+            continue;
         }
-        ssl = SSL_new(la->ctx);
-        SSL_set_fd(ssl, clientfd);
-        if (SSL_accept(ssl) <= 0) {
-            ERR_print_errors_fp(stderr);
-            break;
-        }
-
-        int nrecv = SSL_read(ssl, recvbuf, sizeof(recvbuf));
-
-        LOG_INFO("[%d] Recv a request size %d through TLS\n", clientfd, nrecv);
-        la->recv_handle(recvbuf + 2, nrecv - 2, &msgrcv);
-
-        if (la->resolv_handle(sendbuf + 2, &nsend, &msgrcv) < 0) {
-            LOG_ERR("resolv failed for TLS Server\n");
-            free(la);
-        }
-        // the extra header payload
-        *(uint16_t *)sendbuf = htons(nsend);
-        if (SSL_write(ssl, sendbuf, nsend + 2) < 0) {
-            LOG_ERR("TLS connection failed sending dns resp\n");
-            break;
-        }
-        SSL_shutdown(ssl);
-        SSL_free(ssl);
-        close(clientfd);
-        LOG_INFO("message size %d sent\n", nsend);
+        threadpool_add_job(create_job(
+            ssl_resolv_and_respond,
+            create_resolv_args(&addr, NULL, NULL, la->recv_handle,
+                               la->resolv_handle, la->ctx, clientfd)));
     }
 
     free(la);

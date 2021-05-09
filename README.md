@@ -10,7 +10,15 @@ A definition-implemented Domain Name Server(Relay)
 - [x] cache
 - [x] concurrent support
 - [ ] ~~EDNS(RFC2671) (abandoned)~~
-- [ ] DOT(RFC7858, RFC8310)
+- [x] DOT(RFC7858, RFC8310)(self-signed naive version)
+
+## Use
+
+**Create the target dir** `mkdir build`
+**Configure cmake** `cd build && cmake ..`
+**Create the Pem for SSL, apply and trust it (optional)** in _server.c_, alt paths for public pem and private key with *SSL_CERT_PATH* and *SSL_KEY_PATH*, and set your passphrase with *SSL_PASSPHRASE*
+**Compile the project** `make`
+**Run it with args** `src/baka_dns --relay=/root/Projects/baka_dns/dnsrelay.txt -v --dot`
 
 ## Reference
 

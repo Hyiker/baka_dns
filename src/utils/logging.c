@@ -16,7 +16,8 @@ int _LOG_INFO(const char* filename, const char* func, const char* fmt, ...) {
     time_t tm;
     tm = time(NULL);
     strftime(timebuf, 100, "%H:%M:%S", localtime(&tm));
-    printf("[%s::%s %s] ", filename, func, timebuf);
+    //    printf("[%s::%s %s] ", filename, func, timebuf);
+    printf("[%s] ", timebuf);
     vprintf(fmt, args);
     va_end(args);
     fflush(stdout);
@@ -47,7 +48,8 @@ void _LOG_ERR(const char* filename, const char* func, const char* fmt, ...) {
     time_t tm;
     tm = time(NULL);
     strftime(timebuf, 100, "%H:%M:%S", localtime(&tm));
-    fprintf(stderr, "[%s::%s %s] ", filename, func, timebuf);
+    // fprintf(stderr, "[%s::%s %s] ", filename, func, timebuf);
+    fprintf(stderr, "[%s] ", timebuf);
     vfprintf(stderr, fmt, args);
     va_end(args);
     fflush(stderr);
