@@ -20,6 +20,7 @@ static error_t parse_opt(int key, char* arg, struct argp_state* state) {
             break;
         case 't':
             ptrconf->dot_enable = 1;
+            break;
         case 'r':
             ptrconf->relay_file_path = arg;
             break;
