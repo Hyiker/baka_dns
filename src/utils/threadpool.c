@@ -15,12 +15,16 @@ static void queue_init(struct jobqueue* qptr) {
 }
 static ssize_t queue_push(struct jobqueue* qptr, struct job* job) {
     if (qptr->len >= N_THREADS_MAX) {
-        LOG_ERR("pushing a full queue\n");
+        LOG_ERR("pushing a full queue, threads alive %u\n",
+                threadpool.n_threads_free);
+        // notify threads to fetch a job
+        pthread_cond_signal(&threadpool.queue.job_cv);
         return -1;
     }
     QINDEX_INC(qptr->back);
     qptr->queue[qptr->back] = job;
     qptr->len++;
+    LOG_INFO("threads alive: %u\n", threadpool.n_threads_free);
     pthread_cond_signal(&threadpool.queue.job_cv);
     return 1;
 }
