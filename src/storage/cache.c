@@ -6,6 +6,7 @@
 #include <unistd.h>
 
 #include "utils/logging.h"
+#include "utils/threadpool.h"
 struct rr_cache cache;
 pthread_t timer_thread;
 static struct rr_cache_linked_node* create_cache_node(
