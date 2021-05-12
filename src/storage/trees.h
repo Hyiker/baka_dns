@@ -3,7 +3,8 @@
 #include <stdint.h>
 
 #include "storage/message.h"
-#define HASH_BUCKET_SIZE 256
+#define HASH_BUCKET_SIZE 1024
+#define HASH_SWITCH_THRESHOLD 32
 #define RR_ARR_LEN 2
 #define SUBDOMAIN_MAX 50
 #define RR_ARR_A 0
@@ -24,7 +25,13 @@ struct linked_node {
 };
 // tree node is a hash bucket of node elements
 struct tree_node {
-    struct linked_node* bucket[HASH_BUCKET_SIZE];
+    enum { HASH_BUCKET, LINKED_LIST } type;
+    uint32_t size;
+    union {
+        // a bucket with size HASH_BUCKET_SIZE
+        struct linked_node** bucket;
+        struct linked_node* linked_list;
+    } container;
 };
 
 struct bucket_tree {
@@ -40,6 +47,7 @@ struct bucket_tree* tree_init(uint32_t (*hash_fun)(const uint8_t*));
 int tree_insert(struct bucket_tree*, const uint8_t*, struct resource_record*);
 
 // search a tree by domain and its length & type
-struct resource_record* tree_search(struct bucket_tree*, uint8_t*, uint32_t, uint16_t);
+struct resource_record* tree_search(struct bucket_tree*, uint8_t*, uint32_t,
+                                    uint16_t);
 
 #endif

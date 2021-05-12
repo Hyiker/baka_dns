@@ -1,6 +1,7 @@
 #include "storage/trees.h"
 
 #include <stdlib.h>
+#include <sys/types.h>
 
 #include "string.h"
 #include "utils/logging.h"
@@ -8,6 +9,7 @@
 static struct tree_node* create_tree_node() {
     struct tree_node* tn = malloc(sizeof(struct tree_node));
     memset(tn, 0, sizeof(struct tree_node));
+    tn->type = LINKED_LIST;
     return tn;
 }
 static struct linked_node* create_linked_node() {
@@ -31,7 +33,7 @@ struct bucket_tree* tree_init(uint32_t (*hash_fun)(const uint8_t*)) {
     bt->root = create_tree_node();
     return bt;
 }
-static struct linked_node* hash_ll_find(
+static struct linked_node* _hash_ll_find(
     struct linked_node* bucket[HASH_BUCKET_SIZE], const uint8_t* target) {
     uint32_t index = rr_hash(target) % HASH_BUCKET_SIZE;
     struct linked_node* ln = bucket[index];
@@ -42,6 +44,73 @@ static struct linked_node* hash_ll_find(
         ln = ln->next;
     }
     return ln;
+}
+static struct linked_node* _ll_find(struct linked_node* node,
+                                    const uint8_t* target) {
+    while (node) {
+        if (strncmp(target, node->element.domain, (*target) + 1) == 0) {
+            break;
+        }
+
+        node = node->next;
+    }
+    return node;
+}
+static struct linked_node* tree_node_find(struct tree_node* tn,
+                                          const uint8_t* target) {
+    switch (tn->type) {
+        case LINKED_LIST:
+            return _ll_find(tn->container.linked_list, target);
+            break;
+        case HASH_BUCKET:
+            return _hash_ll_find(tn->container.bucket, target);
+            break;
+        default:
+            LOG_ERR("unknown container type\n");
+            return NULL;
+            break;
+    };
+}
+static struct linked_node* tree_node_insert(
+    struct tree_node* tn, const uint8_t* rev_domain,
+    uint32_t (*hash_fun)(const uint8_t*)) {
+    struct linked_node* new_node = create_linked_node();
+    memcpy(new_node->element.domain, rev_domain, (*rev_domain) + 1);
+    switch (tn->type) {
+        case HASH_BUCKET:;
+            uint32_t index = hash_fun(rev_domain) % HASH_BUCKET_SIZE;
+            new_node->next = tn->container.bucket[index];
+            tn->container.bucket[index] = new_node;
+            break;
+        case LINKED_LIST:
+            new_node->next = tn->container.linked_list;
+            tn->container.linked_list = new_node;
+            break;
+        default:
+            LOG_ERR("unknown container type\n");
+            free(new_node);
+            return NULL;
+            break;
+    }
+    tn->size++;
+    if (tn->size > HASH_SWITCH_THRESHOLD && tn->type == LINKED_LIST) {
+        LOG_INFO("switching to hash bucket\n");
+        // linked list too long, switch to hash list
+        tn->type = HASH_BUCKET;
+        struct linked_node* node = new_node;
+        while (node) {
+            tn->container.bucket =
+                malloc(sizeof(struct linked_node*) * HASH_BUCKET_SIZE);
+            memset(tn->container.bucket, 0,
+                   sizeof(struct linked_node*) * HASH_BUCKET_SIZE);
+            uint32_t index = hash_fun(node->element.domain) % HASH_BUCKET_SIZE;
+            node->next = tn->container.bucket[index];
+            tn->container.bucket[index] = node;
+            node = node->next;
+        }
+    }
+
+    return new_node;
 }
 int tree_insert(struct bucket_tree* tree, const uint8_t* rev_domain,
                 struct resource_record* rr) {
@@ -62,7 +131,7 @@ int tree_insert(struct bucket_tree* tree, const uint8_t* rev_domain,
             return -1;
     }
     while (*rev_domain) {
-        struct linked_node* ln = hash_ll_find(tn->bucket, rev_domain);
+        struct linked_node* ln = tree_node_find(tn, rev_domain);
         if (ln) {
             // node is found
             if (!next) {
@@ -86,11 +155,8 @@ int tree_insert(struct bucket_tree* tree, const uint8_t* rev_domain,
             }
         } else {
             // node is not found, create it
-            uint32_t index = tree->hash_fun(rev_domain) % HASH_BUCKET_SIZE;
-            struct linked_node* new_node = create_linked_node();
-            new_node->next = tn->bucket[index];
-            tn->bucket[index] = new_node;
-            memcpy(new_node->element.domain, rev_domain, (*rev_domain) + 1);
+            struct linked_node* new_node =
+                tree_node_insert(tn, rev_domain, tree->hash_fun);
             if (!next) {
                 // directly create a new linked node in the bucket
                 new_node->element.data[element_index] = rr;
@@ -124,7 +190,7 @@ struct resource_record* tree_search(struct bucket_tree* tree, uint8_t* domain,
     // current tree node focusing
     struct tree_node* tn = tree->root;
     while (*domain) {
-        struct linked_node* ln = hash_ll_find(tn->bucket, domain);
+        struct linked_node* ln = tree_node_find(tn, domain);
         if (!ln) {
             return NULL;
         } else {
