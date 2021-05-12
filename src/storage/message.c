@@ -177,6 +177,7 @@ static int msg_rr_from_buf(const uint8_t* base, const uint8_t* buf,
             memcpy(rdata, rrbuf, real_rdlength);
             LOG_INFO("real: %u, rdlen: %u\n", real_rdlength, rdlength);
             break;
+            // TODO: compatite MX, NS, PTR, TXT
         case RRTYPE_CNAME:;
             int cname_offset = 0;
             int cname_len = read_domain(base, buf, rrbuf, &cname_offset);
