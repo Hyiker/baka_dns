@@ -10,11 +10,10 @@
 #include "storage/database.h"
 #include "unistd.h"
 #include "utils/logging.h"
+#include "utils/spec_defs.h"
 #include "utils/threadpool.h"
 #define TCP_QUEUE_CNT 10
 #define SSL_PASSPHRASE "114514"
-#define SSL_CERT_PATH "/Users/sidhch/Projects/baka_dns/cert/cert.pem"
-#define SSL_KEY_PATH "/Users/sidhch/Projects/baka_dns/cert/key.pem"
 int socket_fd = -1;
 struct resolv_args {
     struct sockaddr_in cliaddr;
