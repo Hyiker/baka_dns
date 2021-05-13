@@ -17,7 +17,7 @@ int _LOG_INFO(const char* filename, const char* func, const char* fmt, ...) {
     tm = time(NULL);
     strftime(timebuf, 100, "%H:%M:%S", localtime(&tm));
     //    printf("[%s::%s %s] ", filename, func, timebuf);
-    printf("[\033[0;32mINFO\033[0m %s] ", timebuf);
+    printf("[\033[0;32mINF\033[0m %s] ", timebuf);
     vprintf(fmt, args);
     va_end(args);
     fflush(stdout);

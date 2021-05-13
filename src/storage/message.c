@@ -61,9 +61,14 @@ int rr_copy(struct resource_record* dest, const struct resource_record* src) {
         return -1;
     }
     dest->name = malloc(sizeof(uint8_t) * dlen);
-    dest->rdata = malloc(sizeof(uint8_t) * src->rdlength);
+    if (src->rdlength) {
+        dest->rdata = malloc(sizeof(uint8_t) * src->rdlength);
+        memcpy(dest->rdata, src->rdata, sizeof(uint8_t) * src->rdlength);
+    } else {
+        dest->rdata = NULL;
+    }
+
     memcpy(dest->name, src->name, sizeof(uint8_t) * dlen);
-    memcpy(dest->rdata, src->rdata, sizeof(uint8_t) * src->rdlength);
     return 1;
 }
 
@@ -173,24 +178,33 @@ static int msg_rr_from_buf(const uint8_t* base, const uint8_t* buf,
             memcpy(rrbuf + mname_len + rname_len,
                    buf + mname_offset + rname_offset, sizeof(uint32_t) * 5);
             real_rdlength = mname_len + rname_len + sizeof(uint32_t) * 5;
-            rdata = malloc(real_rdlength);
-            memcpy(rdata, rrbuf, real_rdlength);
             LOG_INFO("real: %u, rdlen: %u\n", real_rdlength, rdlength);
             break;
             // TODO: compatite MX, NS, PTR, TXT
-        case RRTYPE_CNAME:;
-            int cname_offset = 0;
-            int cname_len = read_domain(base, buf, rrbuf, &cname_offset);
-            real_rdlength = cname_len;
+        case RRTYPE_MX:;
+            memcpy(rrbuf, buf, sizeof(uint16_t));
+            int exchange_offset = 0;
+            int exchange_len = read_domain(base, buf, rrbuf + sizeof(uint16_t),
+                                           &exchange_offset);
+            real_rdlength = exchange_len + sizeof(uint16_t);
             rdata = malloc(real_rdlength);
-            memcpy(rdata, rrbuf, real_rdlength);
+            break;
+        case RRTYPE_CNAME:;
+            int _offset = 0;
+            int _len = read_domain(base, buf, rrbuf, &_offset);
+            real_rdlength = _len;
             LOG_INFO("real: %u, rdlen: %u\n", real_rdlength, rdlength);
             break;
         default:
-            rdata = malloc(rdlength * sizeof(uint8_t));
             real_rdlength = rdlength;
-            memcpy(rdata, buf, rdlength * sizeof(uint8_t));
+            memcpy(rrbuf, buf, rdlength);
             break;
+    }
+    if (real_rdlength) {
+        rdata = malloc(real_rdlength);
+        memcpy(rdata, rrbuf, real_rdlength);
+    } else {
+        rdata = NULL;
     }
 
     rr->name = name;
