@@ -180,15 +180,21 @@ static int msg_rr_from_buf(const uint8_t* base, const uint8_t* buf,
             real_rdlength = mname_len + rname_len + sizeof(uint32_t) * 5;
             LOG_INFO("real: %u, rdlen: %u\n", real_rdlength, rdlength);
             break;
-            // TODO: compatite MX, NS, PTR, TXT
         case RRTYPE_MX:;
             memcpy(rrbuf, buf, sizeof(uint16_t));
+            buf += sizeof(uint16_t);
             int exchange_offset = 0;
             int exchange_len = read_domain(base, buf, rrbuf + sizeof(uint16_t),
                                            &exchange_offset);
             real_rdlength = exchange_len + sizeof(uint16_t);
             rdata = malloc(real_rdlength);
             break;
+        case RRTYPE_NS:
+        // slide through
+        case RRTYPE_PTR:
+        // slide through
+        case RRTYPE_TXT:
+        // slide through
         case RRTYPE_CNAME:;
             int _offset = 0;
             int _len = read_domain(base, buf, rrbuf, &_offset);

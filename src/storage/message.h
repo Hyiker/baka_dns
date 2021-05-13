@@ -28,14 +28,17 @@
 #define RCODE_NOT_IMPLEMENTED 4
 #define RCODE_REFUSED 5
 
+#define RRCLASS_IN 1
+
 #define RRTYPE_A 1
 #define RRTYPE_NS 2
 #define RRTYPE_CNAME 5
 #define RRTYPE_PTR 12
 #define RRTYPE_HINFO 13
 #define RRTYPE_MX 15
-#define RRCLASS_IN 1
 #define RRTYPE_SOA 6
+#define RRTYPE_OPT 41
+#define RRTYPE_TXT 16
 
 #define QR_MASK 0x80
 #define OPCODE_MASK 0x78

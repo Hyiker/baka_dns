@@ -33,9 +33,9 @@ int cache_find_rr(struct resource_record* dest, uint8_t* domain, uint16_t type,
     struct rr_cache_linked_node* node = cache.dummy->next;
     int n = 0;
     while (node) {
-        if (strncmp(domain, node->element->name,
-                    domain_len(node->element->name)) == 0 &&
-            type == node->element->type && _class == node->element->_class) {
+        if (type == node->element->type && _class == node->element->_class &&
+            strncmp(domain, node->element->name,
+                    domain_len(node->element->name)) == 0) {
             rr_copy(dest, node->element);
             dest++;
             n++;
