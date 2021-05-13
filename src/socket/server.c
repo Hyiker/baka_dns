@@ -92,9 +92,8 @@ static struct responder_args *create_responder_args(
     return la;
 }
 int dns_recv_handle(const uint8_t *buf, uint32_t size, struct message *msg) {
-    int msgsig = message_from_buf(buf, size, msg);
-
-    return msgsig;
+    
+    return message_from_buf(buf, size, msg);
 }
 
 static int create_socket(in_addr_t addr, uint16_t port, int protocol) {
@@ -214,19 +213,27 @@ static void udp_responder(struct responder_args *la) {
     int len, nrecv, nsend;
     uint8_t recvbuf[UDP_BUFFER_SIZE];
     socket_fd = la->fd;
-    len = sizeof(cliaddr);  // len is value/resuslt
-
+    len = sizeof(cliaddr);  // len is value/result
+    fd_set fds;
+    FD_ZERO(&fds);
+    struct timeval tv;
+    tv.tv_sec = 0;
+    tv.tv_usec = 500;
     while (1) {
+        FD_SET(socket_fd, &fds);
         memset(recvbuf, 0, sizeof(recvbuf));
         memset(&cliaddr, 0, sizeof(cliaddr));
         len = sizeof(cliaddr);
-        nrecv = recvfrom(socket_fd, (char *)recvbuf, UDP_BUFFER_SIZE,
-                         MSG_WAITALL, (struct sockaddr *)&cliaddr, &len);
-        LOG_INFO("Recv a request through UDP\n");
-        threadpool_add_job(create_job(
-            resolv_and_respond,
-            create_resolv_args(&cliaddr, recvbuf, nrecv, la->recv_handle,
-                               la->resolv_handle, NULL, 0)));
+        select(socket_fd + 1, &fds, NULL, NULL, &tv);
+        if (FD_ISSET(socket_fd, &fds)) {
+            nrecv = recvfrom(socket_fd, (char *)recvbuf, UDP_BUFFER_SIZE,
+                             MSG_WAITALL, (struct sockaddr *)&cliaddr, &len);
+            LOG_INFO("Recv a request through UDP\n");
+            threadpool_add_job(create_job(
+                resolv_and_respond,
+                create_resolv_args(&cliaddr, recvbuf, nrecv, la->recv_handle,
+                                   la->resolv_handle, NULL, 0)));
+        }
     }
     free(la);
     close(la->fd);

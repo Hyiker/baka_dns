@@ -52,7 +52,10 @@ struct job* create_job(void (*fun)(void* arg), void* arg) {
 static struct job* pull_job(struct jobqueue* qptr) {
     struct job* jptr = NULL;
     pthread_mutex_lock(&qptr->job_mutex);
-    pthread_cond_wait(&qptr->job_cv, &qptr->job_mutex);
+    while (!qptr->len) {
+        pthread_cond_wait(&qptr->job_cv, &qptr->job_mutex);
+    }
+
     if (qptr->len) {
         // has job avaliable, get it
         jptr = queue_front(qptr);
