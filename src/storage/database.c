@@ -58,13 +58,23 @@ int init_database(const char* relay_file) {
 
         sscanf(linebuf, "%1024s%1024s", ipbuf, domainbuf);
         str_lower(domainbuf);
-        uint32_t ip = 0;
-        if (ipv4_convert(ipbuf, &ip) < 0) {
-            LOG_ERR("bad ipv4 format\n");
-            continue;
+        uint32_t ipv4 = 0;
+        __uint128_t ipv6 = 0;
+        uint32_t rrtype;
+        if (ipv4_convert(ipbuf, &ipv4) < 0) {
+            LOG_ERR("bad ipv4 format, recognizing as ipv6 addr\n");
+            // fallback to ipv6
+            if (ipv6_convert(ipbuf, &ipv6) < 0) {
+                LOG_ERR("bad ipv6 format\n");
+                continue;
+            } else {
+                rrtype = RRTYPE_AAAA;
+                *(__uint128_t*)formatip = ipv6;
+            }
+        } else {
+            rrtype = RRTYPE_A;
+            *(uint32_t*)formatip = ipv4;
         }
-        ip = htonl(ip);
-        memcpy(formatip, &ip, 4);
 
         int dlen = format_domain(formatd, domainbuf);
         if (dlen < 0 || dlen >= DOMAIN_LEN_MAX) {
@@ -73,7 +83,8 @@ int init_database(const char* relay_file) {
         }
 
         struct resource_record* rr = create_resource_record(
-            formatd, RRTYPE_A, RRCLASS_IN, 0, 4, formatip);
+            formatd, rrtype, RRCLASS_IN, 0,
+            rrtype == RRTYPE_A ? sizeof(ipv4) : sizeof(ipv6), formatip);
         if (insert_database(rr) < 0) {
             free_heap_resource_record(rr);
             free(rr);

@@ -505,7 +505,6 @@
 64.233.185.133 sp7.googleusercontent.com
 64.233.185.133 sp8.googleusercontent.com
 64.233.185.133 sp9.googleusercontent.com
-0::0 absduba.qwe
 64.233.185.94 www.gstatic.com
 64.233.185.94 ssl.gstatic.com
 64.233.185.120 csi.gstatic.com
@@ -908,3 +907,4 @@
 74.125.207.132 2.bp.blogspot.com
 74.125.207.132 3.bp.blogspot.com
 74.125.207.132 4.bp.blogspot.com
+2001:da8:215:4078:250:56ff:fe97:654d bt.byr.cn

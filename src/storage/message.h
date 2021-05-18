@@ -39,6 +39,7 @@
 #define RRTYPE_SOA 6
 #define RRTYPE_OPT 41
 #define RRTYPE_TXT 16
+#define RRTYPE_AAAA 28
 
 #define QR_MASK 0x80
 #define OPCODE_MASK 0x78

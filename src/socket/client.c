@@ -30,7 +30,7 @@ int send_question(uint32_t ipaddr, struct message *reqptr,
     // Filling server information
     servaddr.sin_family = AF_INET;
     servaddr.sin_port = htons(EXTERNAL_DNS_PORT);
-    servaddr.sin_addr.s_addr = htonl(ipaddr);
+    servaddr.sin_addr.s_addr = ipaddr;
 
     // timeout options
     struct timeval timeout;

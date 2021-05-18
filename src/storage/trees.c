@@ -126,6 +126,9 @@ int tree_insert(struct bucket_tree* tree, const uint8_t* rev_domain,
         case RRTYPE_CNAME:
             element_index = RR_ARR_CNAME;
             break;
+        case RRTYPE_AAAA:
+            element_index = RR_ARR_AAAA;
+            break;
         default:
             LOG_ERR("unsupported resource record insertion\n");
             return -1;
@@ -178,6 +181,9 @@ struct resource_record* tree_search(struct bucket_tree* tree, uint8_t* domain,
     switch (rr_type) {
         case RRTYPE_A:
             element_index = RR_ARR_A;
+            break;
+        case RRTYPE_AAAA:
+            element_index = RR_ARR_AAAA;
             break;
         case RRTYPE_CNAME:
             element_index = RR_ARR_CNAME;

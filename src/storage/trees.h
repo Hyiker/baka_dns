@@ -5,10 +5,11 @@
 #include "storage/message.h"
 #define HASH_BUCKET_SIZE 1024
 #define HASH_SWITCH_THRESHOLD 32
-#define RR_ARR_LEN 2
+#define RR_ARR_LEN 3
 #define SUBDOMAIN_MAX 50
 #define RR_ARR_A 0
 #define RR_ARR_CNAME 1
+#define RR_ARR_AAAA 2
 struct tree_node;
 struct node_element {
     // len + uint8...
