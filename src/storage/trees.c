@@ -98,15 +98,16 @@ static struct linked_node* tree_node_insert(
         // linked list too long, switch to hash list
         tn->type = HASH_BUCKET;
         struct linked_node* node = new_node;
+        tn->container.bucket =
+            malloc(sizeof(struct linked_node*) * HASH_BUCKET_SIZE);
+        memset(tn->container.bucket, 0,
+               sizeof(struct linked_node*) * HASH_BUCKET_SIZE);
         while (node) {
-            tn->container.bucket =
-                malloc(sizeof(struct linked_node*) * HASH_BUCKET_SIZE);
-            memset(tn->container.bucket, 0,
-                   sizeof(struct linked_node*) * HASH_BUCKET_SIZE);
             uint32_t index = hash_fun(node->element.domain) % HASH_BUCKET_SIZE;
+            struct linked_node* tmp = node->next;
             node->next = tn->container.bucket[index];
             tn->container.bucket[index] = node;
-            node = node->next;
+            node = tmp;
         }
     }
 
@@ -157,7 +158,7 @@ int tree_insert(struct bucket_tree* tree, const uint8_t* rev_domain,
 
                 ln->element.data[element_index]
                                 [ln->element.data_cnt[element_index]++] = rr;
-                strncpy(ln->element.domain, rev_domain, (*rev_domain) + 1);
+                memcpy(ln->element.domain, rev_domain, (*rev_domain) + 1);
                 return 1;
 
             } else {
@@ -204,13 +205,13 @@ ssize_t tree_search(struct bucket_tree* tree, struct resource_record* dest,
             element_index = RR_ARR_CNAME;
             break;
         default:
-            return NULL;
+            return 0;
     }
     // pointer to next domain
     uint32_t next = *(domain + (*domain) + 1);
     // current tree node focusing
     struct tree_node* tn = tree->root;
-    while (*domain) {
+    while (*domain && tn) {
         struct linked_node* ln = tree_node_find(tn, domain);
         if (!ln) {
             return 0;
