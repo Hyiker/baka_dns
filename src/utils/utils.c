@@ -10,7 +10,14 @@ int ipv4_convert(uint8_t* src, uint32_t* dest) {
     int index = 0;
     while (token != NULL) {
         int segment = -1;
-        ret = ret << 8 | (segment = atoi(token));
+        char* endpoint;
+        segment = strtol(token, &endpoint, 10);
+        if (endpoint == NULL || *endpoint != '\0')
+        {
+            return -1;
+        }
+        
+        ret = ret << 8 | segment;
         index++;
         if (segment < 0 || segment >= 256) {
             LOG_ERR("ipv4 addr segment must be within [0,255]\n");

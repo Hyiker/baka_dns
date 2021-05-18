@@ -3,7 +3,7 @@
 #include <stdint.h>
 
 #include "utils/conf.h"
-#define DOMAIN_LEN_MAX 256
+#define DOMAIN_LEN_MAX 255
 #define DOMAIN_BUF_LEN 512
 #define RR_BUF_SIZE 512
 #define QR_REQ 0

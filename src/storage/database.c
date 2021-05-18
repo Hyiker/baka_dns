@@ -4,6 +4,7 @@
 #include <ctype.h>
 #include <stdlib.h>
 
+#include "message.h"
 #include "utils/logging.h"
 #include "utils/utils.h"
 #define RR_BUF_MAX 1000
@@ -47,17 +48,30 @@ int init_database(const char* relay_file) {
         return -1;
     }
     char domainbuf[1024], ipbuf[1024], formatd[DOMAIN_BUF_LEN], formatip[1024];
-    uint32_t cnt = 0;
-    while (fscanf(fp, "%s%s", ipbuf, domainbuf) != -1) {
+    char* linebuf = NULL;
+    uint32_t len, nread;
+    while ((nread = getline(&linebuf, &len, fp)) != -1) {
+        if (nread > 2048) {
+            LOG_ERR("line len too long\n");
+            continue;
+        }
+
+        sscanf(linebuf, "%1024s%1024s", ipbuf, domainbuf);
         str_lower(domainbuf);
-        // LOG_INFO("Inserting domain [%u]`%s`\n", ++cnt, domainbuf);
         uint32_t ip = 0;
         if (ipv4_convert(ipbuf, &ip) < 0) {
-            return -1;
+            LOG_ERR("bad ipv4 format\n");
+            continue;
         }
         ip = htonl(ip);
         memcpy(formatip, &ip, 4);
+
         int dlen = format_domain(formatd, domainbuf);
+        if (dlen < 0 || dlen >= DOMAIN_LEN_MAX) {
+            LOG_ERR("bad domain\n");
+            continue;
+        }
+
         struct resource_record* rr = create_resource_record(
             formatd, RRTYPE_A, RRCLASS_IN, 0, 4, formatip);
         if (insert_database(rr) < 0) {
@@ -65,6 +79,7 @@ int init_database(const char* relay_file) {
             free(rr);
         }
     }
+    free(linebuf);
 
     return 1;
 }
