@@ -68,10 +68,17 @@ int send_question(uint32_t ipaddr, struct message *reqptr,
     }
 
     if (message_from_buf(buffer, n, respptr) < 0) {
-        LOG_ERR("bad response data");
+        LOG_ERR("bad response data\n");
         close(sockfd);
         return -1;
     }
+    if (respptr->header.id != new_id) {
+        LOG_ERR("bad response data\n");
+        close(sockfd);
+        free_heap_message(respptr);
+        return -1;
+    }
+
     respptr->header.id = old_id;
 
     close(sockfd);
