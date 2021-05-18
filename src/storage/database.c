@@ -104,7 +104,8 @@ int insert_database(struct resource_record* rr) {
     domain_rev(revbuf, rr->name);
     return tree_insert(db.tree, revbuf, rr);
 }
-struct resource_record* select_database(const struct message_question* msgq) {
+ssize_t select_database(const struct message_question* msgq,
+                        struct resource_record* dest) {
     int dlen = domain_len(msgq->qname);
     if (dlen < 0) {
         LOG_ERR("bad domain length\n");
@@ -112,5 +113,5 @@ struct resource_record* select_database(const struct message_question* msgq) {
     }
     uint8_t revbuf[DOMAIN_BUF_LEN] = {0};
     domain_rev(revbuf, msgq->qname);
-    return tree_search(db.tree, revbuf, dlen, msgq->qtype);
+    return tree_search(db.tree, dest, revbuf, dlen, msgq->qtype);
 }

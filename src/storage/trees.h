@@ -10,11 +10,13 @@
 #define RR_ARR_A 0
 #define RR_ARR_CNAME 1
 #define RR_ARR_AAAA 2
+#define RR_CNT_MAX 4
 struct tree_node;
 struct node_element {
     // len + uint8...
     char domain[SUBDOMAIN_MAX];
-    struct resource_record* data[RR_ARR_LEN];
+    struct resource_record* data[RR_ARR_LEN][RR_CNT_MAX];
+    uint32_t data_cnt[RR_ARR_LEN];
     // ptr to the higher level domain
     struct tree_node* child;
 };
@@ -48,7 +50,8 @@ struct bucket_tree* tree_init(uint32_t (*hash_fun)(const uint8_t*));
 int tree_insert(struct bucket_tree*, const uint8_t*, struct resource_record*);
 
 // search a tree by domain and its length & type
-struct resource_record* tree_search(struct bucket_tree*, uint8_t*, uint32_t,
-                                    uint16_t);
+// store resource records in _dest_
+ssize_t tree_search(struct bucket_tree*, struct resource_record*, uint8_t*,
+                    uint32_t, uint16_t);
 
 #endif

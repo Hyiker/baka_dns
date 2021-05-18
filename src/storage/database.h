@@ -25,6 +25,7 @@ int init_database(const char*);
 int insert_database(struct resource_record* rr);
 // select database by a msg_question
 // returns the ptr to the rr
-struct resource_record* select_database(const struct message_question*);
+ssize_t select_database(const struct message_question*,
+                                        struct resource_record*);
 
 #endif

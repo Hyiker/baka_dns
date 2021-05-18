@@ -88,17 +88,22 @@ int resolv_handle(uint8_t* sendbuf, uint32_t* ans_size, struct message* query) {
             LOG_INFO("RR not found in local cache\n");
         }
 
-        struct resource_record* rrptr = select_database(question);
+        ssize_t n_rr_db = select_database(question, ans_buffer);
 
-        if (rrptr) {
-            if (!check_blocked(rrptr)) {
-                // if record selected then copy it to answer
-                LOG_INFO("Local Resource Record found\n");
-                rr_copy(&ans_buffer[ans_cnt++], rrptr);
-            } else {
-                rrptr = NULL;
-                LOG_INFO("Domain blocked\n");
+        if (n_rr_db) {
+            LOG_INFO("Local Resource Record found\n");
+            for (size_t i = 0; i < n_rr_db; i++) {
+                if (check_blocked(&ans_buffer[i])) {
+                    // domain blocked
+                    LOG_INFO("domain blocked\n");
+                    for (size_t j = 0; j < n_rr_db; j++) {
+                        free_heap_resource_record(&ans_buffer[i]);
+                    }
+                    ans_cnt = n_rr_db = 0;
+                    break;
+                }
             }
+            ans_cnt = n_rr_db;
         } else {
             LOG_INFO("RR not found in local db\n");
 

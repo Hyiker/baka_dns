@@ -139,14 +139,27 @@ int tree_insert(struct bucket_tree* tree, const uint8_t* rev_domain,
             // node is found
             if (!next) {
                 // final node found
-                if (ln->element.data[element_index]) {
-                    LOG_ERR("duplicated resource record\n");
+                if (ln->element.data_cnt[element_index] >= RR_CNT_MAX) {
+                    LOG_ERR(
+                        "resource record of this kind count has hit the "
+                        "limit\n");
                     return -1;
-                } else {
-                    ln->element.data[element_index] = rr;
-                    strncpy(ln->element.domain, rev_domain, (*rev_domain) + 1);
-                    return 1;
                 }
+                for (size_t i = 0; i < ln->element.data_cnt[element_index];
+                     i++) {
+                    if (memcmp(rr->rdata,
+                               ln->element.data[element_index][i]->rdata,
+                               rr->rdlength) == 0) {
+                        LOG_ERR("duplicated resource record\n");
+                        return -1;
+                    }
+                }
+
+                ln->element.data[element_index]
+                                [ln->element.data_cnt[element_index]++] = rr;
+                strncpy(ln->element.domain, rev_domain, (*rev_domain) + 1);
+                return 1;
+
             } else {
                 // continue to ln's child
                 rev_domain = rev_domain + (*rev_domain) + 1;
@@ -162,7 +175,9 @@ int tree_insert(struct bucket_tree* tree, const uint8_t* rev_domain,
                 tree_node_insert(tn, rev_domain, tree->hash_fun);
             if (!next) {
                 // directly create a new linked node in the bucket
-                new_node->element.data[element_index] = rr;
+                new_node->element
+                    .data[element_index]
+                         [new_node->element.data_cnt[element_index]++] = rr;
                 return 1;
             } else {
                 // create child for it otherwise
@@ -175,8 +190,8 @@ int tree_insert(struct bucket_tree* tree, const uint8_t* rev_domain,
 }
 
 // search a tree by domain and its length
-struct resource_record* tree_search(struct bucket_tree* tree, uint8_t* domain,
-                                    uint32_t dlen, uint16_t rr_type) {
+ssize_t tree_search(struct bucket_tree* tree, struct resource_record* dest,
+                    uint8_t* domain, uint32_t dlen, uint16_t rr_type) {
     int element_index = -1;
     switch (rr_type) {
         case RRTYPE_A:
@@ -198,10 +213,16 @@ struct resource_record* tree_search(struct bucket_tree* tree, uint8_t* domain,
     while (*domain) {
         struct linked_node* ln = tree_node_find(tn, domain);
         if (!ln) {
-            return NULL;
+            return 0;
         } else {
             if (!next) {
-                return ln->element.data[element_index];
+                for (size_t i = 0; i < ln->element.data_cnt[element_index];
+                     i++) {
+                    rr_copy(dest, ln->element.data[element_index][i]);
+                    dest++;
+                }
+
+                return ln->element.data_cnt[element_index];
             } else {
                 domain = domain + (*domain) + 1;
                 next = *(domain + (*domain) + 1);
@@ -209,5 +230,5 @@ struct resource_record* tree_search(struct bucket_tree* tree, uint8_t* domain,
             }
         }
     }
-    return NULL;
+    return 0;
 }
