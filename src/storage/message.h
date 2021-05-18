@@ -94,6 +94,7 @@ int mq_copy(struct message_question*, const struct message_question*);
 // attention: this function will automatically allocates mem for name & rdata
 // return -1 if failed else 1
 int rr_copy(struct resource_record*, const struct resource_record*);
+// save the message into u8 byte stream
 int message_to_u8(const struct message*, uint8_t*);
 
 // free heap-allocated data in the message struct
@@ -130,4 +131,7 @@ uint8_t rr_cmp(struct resource_record*, struct resource_record*);
 
 // check if an resource record is blocked(ip=0.0.0.0)
 uint8_t check_blocked(struct resource_record*);
+
+// construct an empty error response with _rcode_
+ssize_t construct_error_response(uint8_t, struct message*);
 #endif

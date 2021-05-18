@@ -560,3 +560,14 @@ uint8_t rr_cmp(struct resource_record* rr1, struct resource_record* rr2) {
 uint8_t check_blocked(struct resource_record* rr) {
     return *(uint32_t*)(rr->rdata) == 0;
 }
+
+ssize_t construct_error_response(uint8_t rcode, struct message* msgptr) {
+    if (msgptr == NULL) {
+        return -1;
+    }
+    memset(msgptr, 0, sizeof(struct message));
+    msgptr->header.misc1 =
+        create_misc1(QR_RESP, OPCODE_QUERY, AA_TRUE, TC_FALSE, RD_FALSE);
+    msgptr->header.misc2 = create_misc2(RA_TRUE, Z_FLAG, rcode);
+    return 1;
+}

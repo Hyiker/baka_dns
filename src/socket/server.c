@@ -92,7 +92,6 @@ static struct responder_args *create_responder_args(
     return la;
 }
 int dns_recv_handle(const uint8_t *buf, uint32_t size, struct message *msg) {
-    
     return message_from_buf(buf, size, msg);
 }
 
@@ -128,16 +127,29 @@ static int create_socket(in_addr_t addr, uint16_t port, int protocol) {
     return sockfd;
 }
 
-static ssize_t resolv_and_respond(struct resolv_args *args) {
+static ssize_t udp_resolv_and_respond(struct resolv_args *args) {
     uint32_t nsend = 0, len = 0;
     struct message msgrcv;
     uint8_t sendbuf[UDP_BUFFER_SIZE];
     memset(sendbuf, 0, sizeof(sendbuf));
     memset(&msgrcv, 0, sizeof(msgrcv));
     len = sizeof(struct sockaddr_in);
-    args->recv_handle(args->rcvbuffer, args->nrecv, &msgrcv);
+    if (args->recv_handle(args->rcvbuffer, args->nrecv, &msgrcv) < -1) {
+        LOG_ERR("Malformed packet\n");
+        // construct an error response and return
+        struct message errmsg;
+        construct_error_response(RCODE_FORMAT_ERROR, &errmsg);
+        nsend = message_to_u8(&errmsg, sendbuf);
+        sendto(socket_fd, sendbuf, nsend, MSG_CONFIRM,
+               (const struct sockaddr *)&args->cliaddr, len);
+        free_heap_message(&msgrcv);
+        free(args);
+        return -1;
+    }
+
     if (args->resolv_handle(sendbuf, &nsend, &msgrcv) < 0) {
         free(args);
+        free_heap_message(&msgrcv);
         return -1;
     }
     sendto(socket_fd, sendbuf, nsend, MSG_CONFIRM,
@@ -165,21 +177,42 @@ static ssize_t ssl_resolv_and_respond(struct resolv_args *args) {
     }
 
     int nrecv = SSL_read(ssl, recvbuf, sizeof(recvbuf));
-
     LOG_INFO("Recv a request size %d through TLS\n", nrecv);
-    args->recv_handle(recvbuf + 2, nrecv - 2, &msgrcv);
+    if (args->recv_handle(recvbuf + 2, nrecv - 2, &msgrcv) < 0) {
+        LOG_ERR("Malformed packet\n");
+        // construct an error response and return
+        struct message errmsg;
+        construct_error_response(RCODE_FORMAT_ERROR, &errmsg);
+        nsend = message_to_u8(&errmsg, sendbuf);
+        *(uint16_t *)sendbuf = htons(nsend);
+        SSL_write(ssl, sendbuf, nsend + 2);
+        free_heap_message(&msgrcv);
+        SSL_shutdown(ssl);
+        SSL_free(ssl);
+        close(args->clientfd);
+        free(args);
+        return -1;
+    }
 
     if (args->resolv_handle(sendbuf + 2, &nsend, &msgrcv) < 0) {
         LOG_ERR("resolv failed for TLS Server\n");
+        SSL_shutdown(ssl);
+        SSL_free(ssl);
+        close(args->clientfd);
         free(args);
+        return -1;
     }
     // the extra header payload
     *(uint16_t *)sendbuf = htons(nsend);
     if (SSL_write(ssl, sendbuf, nsend + 2) < 0) {
         LOG_ERR("TLS connection failed sending dns resp\n");
+        SSL_shutdown(ssl);
+        SSL_free(ssl);
+        close(args->clientfd);
         free(args);
         return -1;
     }
+    free_heap_message(&msgrcv);
     SSL_shutdown(ssl);
     SSL_free(ssl);
     close(args->clientfd);
@@ -230,7 +263,7 @@ static void udp_responder(struct responder_args *la) {
                              MSG_WAITALL, (struct sockaddr *)&cliaddr, &len);
             LOG_INFO("Recv a request through UDP\n");
             threadpool_add_job(create_job(
-                resolv_and_respond,
+                udp_resolv_and_respond,
                 create_resolv_args(&cliaddr, recvbuf, nrecv, la->recv_handle,
                                    la->resolv_handle, NULL, 0)));
         }
