@@ -51,7 +51,7 @@ static SSL_CTX *create_context() {
 
     ctx = SSL_CTX_new(method);
     if (!ctx) {
-        perror("Unable to create SSL context");
+        LOG_ERR("Unable to create SSL context");
         ERR_print_errors_fp(stderr);
         exit(EXIT_FAILURE);
     }
@@ -159,6 +159,12 @@ static ssize_t udp_resolv_and_respond(struct resolv_args *args) {
     free(args);
     return 1;
 }
+static void cleanup_session(SSL *ssl, struct resolv_args *args) {
+    SSL_shutdown(ssl);
+    SSL_free(ssl);
+    close(args->clientfd);
+    free(args);
+}
 
 static ssize_t ssl_resolv_and_respond(struct resolv_args *args) {
     struct message msgrcv;
@@ -175,10 +181,34 @@ static ssize_t ssl_resolv_and_respond(struct resolv_args *args) {
         free(args);
         return -1;
     }
+    struct timeval tv;
+    tv.tv_sec = 2;
+    tv.tv_usec = 0;
+    setsockopt(args->clientfd, SOL_SOCKET, SO_RCVTIMEO, (const char *)&tv,
+               sizeof tv);
+    uint16_t expected_size;
+    int resp = SSL_read(ssl, &expected_size, sizeof(expected_size));
+    if (resp != sizeof(expected_size)) {
+        LOG_ERR("read size timeout\n");
+        return -1;
+    }
 
-    int nrecv = SSL_read(ssl, recvbuf, sizeof(recvbuf));
+    // read the expected size
+    expected_size = ntohs(expected_size);
+    int nrecv = 0, _rcv = 0;
+    while (nrecv != expected_size &&
+           (_rcv = SSL_read(ssl, recvbuf + nrecv, sizeof(recvbuf))) != -1) {
+        nrecv += _rcv;
+    }
+
+    if (_rcv < 0 || nrecv != expected_size) {
+        LOG_ERR("broken packet from client\n");
+        cleanup_session(ssl, args);
+        return -1;
+    }
+
     LOG_INFO("Recv a request size %d through TLS\n", nrecv);
-    if (args->recv_handle(recvbuf + 2, nrecv - 2, &msgrcv) < 0) {
+    if (args->recv_handle(recvbuf, nrecv, &msgrcv) < 0) {
         LOG_ERR("Malformed packet\n");
         // construct an error response and return
         struct message errmsg;
@@ -187,37 +217,25 @@ static ssize_t ssl_resolv_and_respond(struct resolv_args *args) {
         *(uint16_t *)sendbuf = htons(nsend);
         SSL_write(ssl, sendbuf, nsend + 2);
         free_heap_message(&msgrcv);
-        SSL_shutdown(ssl);
-        SSL_free(ssl);
-        close(args->clientfd);
-        free(args);
+        cleanup_session(ssl, args);
         return -1;
     }
 
     if (args->resolv_handle(sendbuf + 2, &nsend, &msgrcv) < 0) {
         LOG_ERR("resolv failed for TLS Server\n");
-        SSL_shutdown(ssl);
-        SSL_free(ssl);
-        close(args->clientfd);
-        free(args);
+        cleanup_session(ssl, args);
         return -1;
     }
     // the extra header payload
     *(uint16_t *)sendbuf = htons(nsend);
     if (SSL_write(ssl, sendbuf, nsend + 2) < 0) {
         LOG_ERR("TLS connection failed sending dns resp\n");
-        SSL_shutdown(ssl);
-        SSL_free(ssl);
-        close(args->clientfd);
-        free(args);
+        cleanup_session(ssl, args);
         return -1;
     }
     free_heap_message(&msgrcv);
-    SSL_shutdown(ssl);
-    SSL_free(ssl);
-    close(args->clientfd);
+    cleanup_session(ssl, args);
     LOG_INFO("message size %d sent\n", nsend);
-    free(args);
     return 1;
 }
 

@@ -16,6 +16,6 @@
         "cache.h": "c"
     },
     "cmake.debugConfig": {
-        "args": ["-v", "--relay=/root/Projects/baka_dns/dnsrelay.txt"]
+        "args": ["--dot", "-v", "--relay=/root/Projects/baka_dns/dnsrelay.txt"]
     }
 }
