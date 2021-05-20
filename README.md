@@ -9,8 +9,8 @@ A definition-implemented Domain Name Server(Relay)
 - [x] RR Type support
 - [x] cache
 - [x] concurrent support
-- [ ] ~~EDNS(RFC2671) (abandoned)~~
-- [x] DOT(RFC7858, RFC8310)(self-signed naive version)
+- [ ] EDNS(RFC2671) (upstream)
+- [x] DOT(RFC7858, RFC8310)(self-signed naive version, downstream support)
 
 ## Use
 
@@ -28,6 +28,7 @@ A definition-implemented Domain Name Server(Relay)
 
 - 🌲Hash bucket tree database for resource record storage
 - ⚡️️LRU linked list cache
+- ✔ EDNS0 support
 - 🤔DOT(DNS over TLS) support
 
 ## Reference

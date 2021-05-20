@@ -322,7 +322,10 @@ static int msg_rr_to_u8(const struct resource_record* rr, uint8_t* dest) {
     u16h_to_u8n(rr->_class, dest += sizeof(rr->type));
     u32h_to_u8n(rr->ttl, dest += sizeof(rr->_class));
     u16h_to_u8n(rr->rdlength, dest += sizeof(rr->ttl));
-    memcpy(dest += sizeof(rr->rdlength), rr->rdata, rr->rdlength);
+    if (rr->rdlength) {
+        memcpy(dest += sizeof(rr->rdlength), rr->rdata, rr->rdlength);
+    }
+
     return len_name + sizeof(rr->type) + sizeof(rr->_class) + sizeof(rr->ttl) +
            sizeof(rr->rdlength) + rr->rdlength;
 }
@@ -513,7 +516,13 @@ struct resource_record* create_resource_record(uint8_t* name, uint16_t type,
         pthread_exit(NULL);
     }
     rr->name = malloc(dlen * sizeof(uint8_t));
-    rr->rdata = malloc(rdlength * sizeof(uint8_t));
+    if (rdlength) {
+        /* code */
+        rr->rdata = malloc(rdlength * sizeof(uint8_t));
+    } else {
+        rr->rdata = NULL;
+    }
+
     memcpy(rr->name, name, dlen);
     memcpy(rr->rdata, rdata, rdlength);
     rr->type = type;

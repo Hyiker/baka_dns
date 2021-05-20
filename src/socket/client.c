@@ -46,6 +46,34 @@ int send_question(uint32_t ipaddr, struct message *reqptr,
     int n;
     uint32_t len = sizeof(servaddr);
     reqptr->header.id = new_id;
+
+    // edns support
+    struct resource_record *rr_opt = NULL;
+    for (size_t i = 0; i < reqptr->header.arcount; i++) {
+        if (reqptr->addition[i]->type == RRTYPE_OPT) {
+            rr_opt = reqptr->addition[i];
+            break;
+        }
+    }
+
+    if (!rr_opt) {
+        reqptr->header.arcount++;
+        struct resource_record **new_addition =
+            malloc(sizeof(struct resource_record *) * reqptr->header.arcount);
+        size_t i = 0;
+        for (; i < reqptr->header.arcount - 1; i++) {
+            new_addition[i] = reqptr->addition[i];
+            reqptr->addition[i] = NULL;
+        }
+        free(reqptr->addition);
+        uint32_t zero = 0;
+        new_addition[i] = create_resource_record(
+            &zero, RRTYPE_OPT, CLIENT_BUFFER_SIZE, 0, 0, &zero);
+        reqptr->addition = new_addition;
+    } else {
+        rr_opt->ttl = CLIENT_BUFFER_SIZE;
+    }
+
     n = message_to_u8(reqptr, buffer);
     if (n < 0) {
         LOG_ERR("invalid request message\n");
