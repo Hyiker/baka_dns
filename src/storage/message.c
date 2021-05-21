@@ -233,6 +233,12 @@ int message_from_buf(const uint8_t* buf, uint32_t size, struct message* msg) {
     }
     const uint8_t* bufptr = buf;
     msg_header_from_buf(bufptr, &msg->header);
+    if (_TC(msg->header.misc1))
+    {
+        LOG_ERR("truncated message, abandon it\n");
+        return -1;
+    }
+    
     bufptr += sizeof(msg->header);
 
     if (msg->header.qdcount) {
