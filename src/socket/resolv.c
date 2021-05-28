@@ -43,6 +43,11 @@ static int rr_match(const struct resource_record* rr,
 
 int resolv_handle(uint8_t* sendbuf, uint32_t* ans_size, struct message* query) {
     // setup the response message
+    if (_QR(query->header.misc1) != QR_REQ) {
+        LOG_ERR("malformed packet: not a request\n");
+        return -1;
+    }
+
     struct message ans;
     uint8_t failure_flag = RCODE_NO_ERROR;
     memset(&ans, 0, sizeof(ans));
@@ -52,63 +57,65 @@ int resolv_handle(uint8_t* sendbuf, uint32_t* ans_size, struct message* query) {
     ans.header.misc2 = create_misc2(RA_FALSE, Z_FLAG, RCODE_NO_ERROR);
 
     struct resource_record ans_buffer[ANCOUNT_MAX] = {0};
-    int external_dns_flag = 0;
+    int external_dns_flag = _OPCODE(query->header.misc1) != OPCODE_QUERY;
     int ans_cnt = 0;
-    for (int i = 0; i < query->header.qdcount; i++) {
-        if (!query->question[i]) {
-            LOG_ERR("bad query->question");
-            failure_flag = RCODE_FORMAT_ERROR;
-            break;
-        }
-        // for each query, select the relay database
+    if (!external_dns_flag) {
+        for (int i = 0; i < query->header.qdcount; i++) {
+            if (!query->question[i]) {
+                LOG_ERR("bad query->question");
+                failure_flag = RCODE_FORMAT_ERROR;
+                break;
+            }
+            // for each query, select the relay database
 
-        const struct message_question* question = query->question[i];
-        print_question(question);
-        int dlen = domain_len(question->qname);
-        if (dlen < 0) {
-            failure_flag = RCODE_FORMAT_ERROR;
-            break;
-        }
-
-        int n_rec = cache_find_rr(ans_buffer, question->qname, question->qtype,
-                                  question->qclass);
-        if (n_rec < 0) {
-            LOG_ERR("failed when looking in cache\n");
-            failure_flag = RCODE_SERVER_FAILURE;
-            break;
-        } else if (n_rec > 0) {
-            ans_cnt += n_rec;
-            LOG_INFO("RR found in the cache\n");
-            for (size_t j = 0; j < n_rec; j++) {
-                cache_put_rr(&ans_buffer[j]);
+            const struct message_question* question = query->question[i];
+            print_question(question);
+            int dlen = domain_len(question->qname);
+            if (dlen < 0) {
+                failure_flag = RCODE_FORMAT_ERROR;
+                break;
             }
 
-            continue;
-        } else {
-            LOG_INFO("RR not found in local cache\n");
-        }
-
-        ssize_t n_rr_db = select_database(question, ans_buffer);
-
-        if (n_rr_db) {
-            LOG_INFO("Local Resource Record found\n");
-            for (size_t i = 0; i < n_rr_db; i++) {
-                if (check_blocked(&ans_buffer[i])) {
-                    // domain blocked
-                    LOG_INFO("domain blocked\n");
-                    for (size_t j = 0; j < n_rr_db; j++) {
-                        free_heap_resource_record(&ans_buffer[i]);
-                    }
-                    ans_cnt = n_rr_db = 0;
-                    break;
+            int n_rec = cache_find_rr(ans_buffer, question->qname,
+                                      question->qtype, question->qclass);
+            if (n_rec < 0) {
+                LOG_ERR("failed when looking in cache\n");
+                failure_flag = RCODE_SERVER_FAILURE;
+                break;
+            } else if (n_rec > 0) {
+                ans_cnt += n_rec;
+                LOG_INFO("RR found in the cache\n");
+                for (size_t j = 0; j < n_rec; j++) {
+                    cache_put_rr(&ans_buffer[j]);
                 }
-            }
-            ans_cnt = n_rr_db;
-        } else {
-            LOG_INFO("RR not found in local db\n");
 
-            external_dns_flag = 1;
-            break;
+                continue;
+            } else {
+                LOG_INFO("RR not found in local cache\n");
+            }
+
+            ssize_t n_rr_db = select_database(question, ans_buffer);
+
+            if (n_rr_db) {
+                LOG_INFO("Local Resource Record found\n");
+                for (size_t i = 0; i < n_rr_db; i++) {
+                    if (check_blocked(&ans_buffer[i])) {
+                        // domain blocked
+                        LOG_INFO("domain blocked\n");
+                        for (size_t j = 0; j < n_rr_db; j++) {
+                            free_heap_resource_record(&ans_buffer[i]);
+                        }
+                        ans_cnt = n_rr_db = 0;
+                        break;
+                    }
+                }
+                ans_cnt = n_rr_db;
+            } else {
+                LOG_INFO("RR not found in local db\n");
+
+                external_dns_flag = 1;
+                break;
+            }
         }
     }
     if (external_dns_flag && !failure_flag) {
