@@ -128,10 +128,17 @@ void refresh_cache() {
 
             node = next;
             if (cnt == CACHE_SIZE_MAX) {
-                // too many cache record, remove all the nodes after _node_
+                // too many cache records, remove all the nodes after _node_
                 while (node) {
                     next = node->next;
-                    node->last->next = NULL;
+                    if (node->last) {
+                        node->last->next = NULL;
+                    }
+                    if (next)
+                    {
+                        next->last = node->last;
+                    }
+                    
                     free_heap_resource_record(node->element);
                     free(node->element);
                     free(node);

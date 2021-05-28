@@ -17,5 +17,6 @@
     },
     "cmake.debugConfig": {
         "args": ["--dot", "-v", "--relay=/root/Projects/baka_dns/dnsrelay.txt"]
-    }
+    },
+    "cmake.cmakePath": "/usr/bin/cmake"
 }

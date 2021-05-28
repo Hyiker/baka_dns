@@ -127,10 +127,14 @@ int resolv_handle(uint8_t* sendbuf, uint32_t* ans_size, struct message* query) {
     if (!external_dns_flag && !failure_flag) {
         ans.header.ancount = ans_cnt;
         // no external dns sent, and no failure
-        ans.answer =
-            malloc(ans.header.ancount * sizeof(struct resource_record*));
-        memset(ans.answer, 0,
-               sizeof(ans.header.ancount * sizeof(struct resource_record*)));
+        if (ans.header.ancount) {
+            ans.answer =
+                malloc(ans.header.ancount * sizeof(struct resource_record*));
+            memset(
+                ans.answer, 0,
+                sizeof(ans.header.ancount * sizeof(struct resource_record*)));
+        }
+
         for (size_t i = 0; i < ans.header.ancount; i++) {
             ans.answer[i] = malloc(sizeof(struct resource_record));
             memcpy(ans.answer[i], &ans_buffer[i],
