@@ -9,7 +9,7 @@ A definition-implemented Domain Name Server(Relay)
 - [x] RR Type support
 - [x] cache
 - [x] concurrent support
-- [ ] EDNS(RFC2671) (upstream)
+- [x] EDNS(RFC2671) (upstream, version 0)
 - [x] DOT(RFC7858, RFC8310)(self-signed naive version, downstream support)
 
 ## Use
